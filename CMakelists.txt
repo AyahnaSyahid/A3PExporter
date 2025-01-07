@@ -16,6 +16,7 @@ set(CMAKE_BUILD_TYPE Debug)
 find_package(Qt5 COMPONENTS Widgets Sql AxContainer REQUIRED)
 
 set(A3P_MAIN_SOURCES res/res.qrc
+                     res/app.rc
                      src/ui/a3previewdatadialog.ui
                      src/ui/exporter.ui
                      src/ui/tentangaplikasi.ui

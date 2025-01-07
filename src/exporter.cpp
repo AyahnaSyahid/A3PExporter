@@ -48,8 +48,8 @@ int KalkulasiJumlahHalaman(const QString &s)
 }
 
 Exporter::Exporter(QWidget *parent)
-    : ui(new Ui::Exporter), db(new A3DataBase), 
-      // corel(new CorelThread), 
+    : ui(new Ui::Exporter),
+      db(new A3DataBase), 
       QWidget(parent)
 {
     qsm = new QSharedMemory("ExporterAlive", this);
@@ -64,14 +64,11 @@ Exporter::Exporter(QWidget *parent)
     ui->setupUi(this);
 
     glb = new QSettings("conf.ini", QSettings::IniFormat, this);
-    
-    /*
-    QStringList availableVersions = glb->value("CorelApplication/availableVersion").toStringList();
-    */
 
     CorelManager::scan();
     
     CorelManager *corelManager = new CorelManager(this);
+
     if(!SingletonNS::manager) SingletonNS::manager = corelManager;
     
     corelManager->setObjectName("CorelManager");
@@ -79,6 +76,7 @@ Exporter::Exporter(QWidget *parent)
     auto availableVersions = *CorelManager::installedVersions();
 
     ui->comboVersi->clear();
+
     if(!availableVersions.isEmpty()) {
         int idx = 0;
         for(auto i = availableVersions.constBegin();
@@ -97,15 +95,7 @@ Exporter::Exporter(QWidget *parent)
     connect(wk, &CorelWorker::exportMessage, this, &Exporter::handleExportResult);
     connect(wk, &CorelWorker::beginProcessing, this, &Exporter::disablesAll);
     connect(wk, &CorelWorker::endProcessing, this, &Exporter::enablesAll);
-
     connect(ui->comboVersi, SIGNAL(currentIndexChanged(int)), this, SLOT(comboVersiChanged(int)));
-
-    // COREL THREAD
-    // corel->setParent();
-    // connect(corelManager, &CorelThread::result, this, &Exporter::handleCorelResult);
-    // connect(corelManager, &CorelThread::exportMessage, this, &Exporter::handleExportResult);
-    // connect(corelManager, &CorelThread::processingBegin, this, &Exporter::disablesAll);
-    // connect(corelManager, &CorelThread::processingFinished, this, &Exporter::enablesAll);
 
 
     ui->leExpF->setText(glb->value("Exporter/lastExportFolder").toString());
@@ -292,7 +282,6 @@ Exporter::~Exporter()
 
 void Exporter::handleCorelResult(const QMap<QString, QVariant> &res)
 {   
-    // qDebug() << res;
     if(!res.value("getCorel").toBool())
     {
         ui->corelGroup->setDisabled(true);
@@ -459,14 +448,6 @@ void Exporter::on_tbDet_clicked()
 {
     auto *mgr = SingletonNS::manager;
     emit mgr->detect(QVariantMap {{"corelVersion", ui->comboVersi->currentData(Qt::UserRole + 1)}});
-//    // qDebug() << "Det Clicked";
-//    ui->tbDet->setDisabled(true);
-//    if(!corel.isRunning())
-//        corel.start();
-//    QMap<QString, QVariant> task;
-//    task.insert("taskType", "info");
-//    corel.setTask(task);
-//    // ui->tbDet->setDisabled(true);
     toggleExportButton();
 }
 
@@ -497,7 +478,7 @@ void Exporter::updateQty()
                 ui->leQty->setText(QString("%1@1").arg(kalk));
         }
     }
-    // qDebug() << "Kalk = " << kalk;
+    QString
     toggleExportButton();
 }
 
@@ -518,11 +499,6 @@ QString Exporter::pickExportFolder(const QString &current=QString())
 
 void Exporter::requestExport()
 {
-// export foldername pagerange
-//    QString task = "export %1 %2";
-//    task = task.arg(exportName.replace(" ", "-"), ui->lePage->text());
-//    qDebug() << "Export name :" << exportName;
-//    corel.setTask(task);
     QVariantMap m;
     m.insert("taskType", "export");
     QString targetFileName = QString("%1_%2_%3_%4")
@@ -539,7 +515,6 @@ void Exporter::requestExport()
     m.insert("pageRange", ui->lePage->text());
     m.insert("fileName", targetFileName);
     m.insert("dirName", ui->leExpF->text());
-//    corel.setTask(m);
     auto *mgr = SingletonNS::manager;
     m["corelVersion"] = ui->comboVersi->currentData(Qt::UserRole + 1);
     emit mgr->exp(m);
@@ -597,6 +572,7 @@ void Exporter::disablesAll()
     ui->tbDet->setDisabled(true);
     ui->pbExport->setDisabled(true);
 }
+
 void Exporter::enablesAll()
 {
     ui->tbDet->setDisabled(false);
@@ -733,10 +709,7 @@ void Exporter::comboVersiChanged(int index)
             _new = ui->comboVersi->itemText(index);
             message = "Pastikan anda telah menginstall Corel Versi %1 "
                       "Lanjutkan perubahan Corel atau tetap menggunakan Versi %2";
-    if(_new == old) {
-        ui->comboVersi->setCurrentText(old);
-        return;
-    }
+    
     int result = QMessageBox::information(this, "Konfirmasi Corel yang digunakan",
                                           message.arg(_new, old), QMessageBox::Ok, QMessageBox::No);
     if(result == QMessageBox::No) {
