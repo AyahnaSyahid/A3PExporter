@@ -1,0 +1,44 @@
+cmake_minimum_required(VERSION 3.12)
+
+project(A3PExporter VERSION 2.1 LANGUAGES CXX)
+
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+
+set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+
+# set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_BUILD_TYPE Debug)
+
+
+find_package(Qt5 COMPONENTS Widgets Sql AxContainer REQUIRED)
+
+set(A3P_MAIN_SOURCES res/res.qrc
+                     src/ui/a3previewdatadialog.ui
+                     src/ui/exporter.ui
+                     src/ui/tentangaplikasi.ui
+                     src/incl/a3database.h
+                     src/incl/a3previewdatadialog.h
+                     src/incl/exporter.h
+                     src/incl/models.h
+                     src/incl/previewmodel.h
+                     src/incl/savetoexcelfile.h
+                     src/incl/tentangaplikasi.h
+                     src/a3database.cpp
+                     src/a3previewdatadialog.cpp
+                     src/exporter.cpp
+                     src/main.cpp
+                     src/models.cpp
+                     src/previewmodel.cpp
+                     src/savetoexcelfile.cpp
+                     src/tentangaplikasi.cpp
+                     src/corelmanager/corelmanager.cpp
+                     src/corelmanager/incl/corelmanager.h
+                     )
+
+add_executable(A3PExporter ${A3P_MAIN_SOURCES})
+
+target_include_directories(A3PExporter PRIVATE static-libs/header)
+target_link_libraries(A3PExporter PRIVATE Qt5::Widgets Qt5::Sql Qt5::AxContainer ${CMAKE_SOURCE_DIR}/static-libs/libQXlsx.a)
