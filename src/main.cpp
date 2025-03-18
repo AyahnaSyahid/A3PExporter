@@ -18,7 +18,9 @@ int main(int argc, char *argv[])
     CorelManager cm;
     Exporter w;
     w.setVersionMap(cm.versionMap(17, 50));
-    QSharedMemory shamem("ExporterAlive");    
+    QSharedMemory shamem("ExporterAlive");
+	
+
     if( shamem.create(13) )
     {
         w.show();
