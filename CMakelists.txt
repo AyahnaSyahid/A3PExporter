@@ -8,9 +8,9 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-# set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_BUILD_TYPE Debug)
+# set(CMAKE_BUILD_TYPE Release)
 
 
 find_package(Qt5 COMPONENTS Widgets Sql AxContainer REQUIRED)
@@ -37,9 +37,11 @@ set(A3P_MAIN_SOURCES res/res.qrc
                      src/tentangaplikasi.cpp
                      src/corelmanager/corelmanager.cpp
                      src/corelmanager/incl/corelmanager.h
+                     src/corelmanager/coreldriverthread.cpp
+                     src/corelmanager/incl/coreldriverthread.h
                      )
 
 add_executable(A3PExporter ${A3P_MAIN_SOURCES})
 
-target_include_directories(A3PExporter PRIVATE static-libs/header)
+target_include_directories(A3PExporter PRIVATE ${CMAKE_SOURCE_DIR}/static-libs/header)
 target_link_libraries(A3PExporter PRIVATE Qt5::Widgets Qt5::Sql Qt5::AxContainer ${CMAKE_SOURCE_DIR}/static-libs/libQXlsx.a)

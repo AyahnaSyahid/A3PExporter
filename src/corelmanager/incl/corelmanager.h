@@ -2,65 +2,32 @@
 #define CORELMANAGER_H
 
 #include <QObject>
-#include <QAxObject>
+#include <QPair>
 #include <QThread>
+#include <QVariantMap>
 
-class CorelWorker;
+
 class CorelManager : public QObject {
     Q_OBJECT
-    static int refcount;
-    static int scanBeginVersion;
-    static int scanEndVersion;
-    static QAxObject checker;
-    static QMap<int, QPair<QString, QString>> *versions;
-    QThread workerThread;
-
-    CorelWorker *worker;
+	QThread *workerThread;
 
 public:
-    static void scan();
-    static void setScanBeginVersion(int start);
-    static void setScanEndVersion(int end);
-    static void setScanVersion(int start, int end);
-    static bool hasDocumentOpen(int version);
-    static const QMap<int, QPair<QString, QString>> *installedVersions();
-    CorelWorker *getWorker() const {return worker;}
-    CorelManager(QObject *parent=nullptr);
+	CorelManager(QObject *parent=nullptr);
     ~CorelManager();
-
-signals:
-    void initializeWorker();
-    void detect(const QVariantMap&);
-    void exp(const QVariantMap&);
-    void sett(const QVariantMap&);
-    void cldoc(const QVariantMap&);
-
-};
-
-class CorelWorker : public QObject {
-    Q_OBJECT
-    QAxObject *ax;
-    QString controlName;
-    bool initialized;
-public:
-    CorelWorker(QObject *parent=nullptr);
-    ~CorelWorker();
+	QMap<int, QPair<QString, QString>> versionMap(int end=60, int start=22) const;
 
 public slots:
-   void init();
-   void detectDocument(const QVariantMap& task);
-   void exportDocument(const QVariantMap& task);
-   void openPdfSettings(const QVariantMap& task);
-   void closeCurrentDocument(const QVariantMap& task);
-   void setControl(const QString& n);
-
+    void detectCurrentDocument(const QString& clsid);
+    void exportDocument(const QString& clsid,
+                        const QString& documentId,
+                        const QString& exportPath,
+                        const QString& exportFileName);
+    void openPdfSettings(const QString& clsid);
+    void closeDocument(const QString& clsid,
+                       const QString& documentId);
 signals:
-   void beginProcessing();
-   void endProcessing();
-   void result(const QVariantMap&);
-   void exportMessage(const QVariantMap&);
-   void controlNameChanged(const QString& old, const QString &nw);
-   void taskChanged();
+    void detectResult(const QString& clsid, const QVariantMap& vmap);
+    void exportResult(const QString& clsid, const QVariantMap& vmap);
 };
 
 #endif // CORELMANAGER_H

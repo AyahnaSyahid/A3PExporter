@@ -1,48 +1,11 @@
-#include "incl/corelmanager.h"
-#include "combaseapi.h"
-#include <QVector>
-#include <QMap>
-
+#include "incl/corelworker.h"
+#include <QAxObject>
+#include <QFile>
 #include <QFileInfo>
 #include <QTemporaryFile>
-#include <QSettings>
 #include <QtDebug>
+#include "combaseapi.h"
 
-CorelManager::CorelManager(QObject* parent)
-: workerThread(new QThread(this)), QObject()
-{ }
-
-CorelManager::~CorelManager()
-{
-	workerThread->quit();
-	workerThread->wait();
-    workerThread->deleteLater();
-}
-
-QMap<int, QPair<QString, QString>> CorelManager::versionMap(int end, int start) const
-{
-    QMap<int, QPair<QString, QString>> result;
-    QSettings reg("HKEY_CLASSES_ROOT", QSettings::NativeFormat);
-    int a = qMin(end, start);
-    int b = qMax(end, start);
-    for(int i=a; i<=b; ++i) {
-        QString ProgId = QString("CorelDRAW.Application.%1").arg(i);
-        QString ClsId = reg.value(QString("%1/CLSID/.").arg(ProgId), "").toString();
-        if(!ClsId.isEmpty()) {
-            result.insert(i, {ProgId, ClsId});
-        }
-    }
-    return result;
-}
-void CorelManager::detectCurrentDocument(const QString& clsid) {}
-void CorelManager::exportDocument(const QString& clsid,
-                        const QString& documentId,
-                        const QString& exportPath,
-                        const QString& exportFileName){}
-void CorelManager::openPdfSettings(const QString& clsid){}
-void CorelManager::closeDocument(const QString& clsid,
-                       const QString& documentId){}
-/*
 CorelWorker::CorelWorker(QObject *parent)
     : QObject(parent),
       controlName("CorelDRAW.Application"),
@@ -63,10 +26,9 @@ void CorelWorker::init()
     initialized = true;
 }
 
-void CorelWorker::detectDocument(const QVariantMap& task)
+void CorelWorker::detectDocument(const Params& param)
 {
     emit beginProcessing();
-    qDebug() << task;  
     if(!initialized) init();
     QVariantMap res;
     bool corelOk = ax->setControl(task["corelVersion"].toString());
@@ -223,4 +185,3 @@ void CorelWorker::setControl(const QString &n)
         emit controlNameChanged(old, n);
     }
 }
-*/

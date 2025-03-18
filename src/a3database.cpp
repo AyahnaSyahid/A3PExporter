@@ -44,7 +44,6 @@ A3DataBase::A3DataBase(QObject *parent) :
         QDir appPath(qApp->applicationDirPath());
         if(!appPath.exists("data"))
             appPath.mkdir("data");
-        // QString dbName = ":memory:";
         QString dbName = appPath.absoluteFilePath("data/a3p.db");
         setDataBaseName(dbName);
         defBase = m_db;
@@ -67,7 +66,6 @@ A3DataBase::A3DataBase(QObject *parent) :
     connect(this, &A3DataBase::dataUpdated, model, &A3PDataModel::select);
     connect(this, &A3DataBase::dataRemoved, model, &A3PDataModel::select);
     connect(this, &A3DataBase::dataRemoved, model, [=](const qlonglong &_id){emit dataUpdated(_id);});
-
 }
 
 A3DataBase::~A3DataBase()
@@ -98,7 +96,6 @@ A3PDataModel *A3DataBase::a3dataTable()
 {
     if(!model)
     {
-        // qDebug() << "Called on a3database.cpp";
         model = new A3PDataModel(this);
         model->setTable("a3pdata");
         model->select();
@@ -124,22 +121,13 @@ void A3DataBase::insert(const QVariantMap &val)
     }
     else
     {
-//        qDebug() << p.lastError().text();
-//        QVariantMap m = p.boundValues();
-//        for(auto y = m.keyBegin(); y != m.keyEnd(); ++y)
-//        {
-//            qDebug() << *y << " : " << m[*y];
-//        }
-//        qDebug() << p.lastQuery();
         emit operationFail(p.lastError().text());
-
     }
 }
 
 void A3DataBase::insert(const QString &str)
 {
     QVariantMap m = fileStringToMap(str);
-//    qDebug() << "dataInsert" << m ;
     if(!m.count())
     {
         emit operationFail("Nama file tidak valid");
@@ -150,7 +138,6 @@ void A3DataBase::insert(const QString &str)
 
 QVariantMap A3DataBase::fileStringToMap(const QString &str)
 {
-    // strToMap
     QFileInfo fi(str);
     QVariantMap qm;
     /* REVISI 20220115
@@ -159,14 +146,13 @@ QVariantMap A3DataBase::fileStringToMap(const QString &str)
             CODE AWAL =  QStringList sl = fi.baseName().toUpper().split("_");
      */
     QStringList sl = fi.completeBaseName().toUpper().split("_");
-    // qDebug() << sl;
     if(sl.count() < 4)
         return qm;
     qm.insert("klien", sl[0]);
     qm.insert("file", sl[1]);
     qm.insert("bahan", sl[2]);
     int page = 1, count;
-    QStringList qty = sl[3].split("@", QString::SkipEmptyParts);
+    QStringList qty = sl[3].split("@", Qt::SkipEmptyParts);
 //    qDebug() << "qty = " << qty;
     count = qty[0].toInt();
     if(qty.count() > 1)

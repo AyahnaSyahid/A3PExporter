@@ -5,6 +5,10 @@
 #include <QFileSystemModel>
 #include <QCompleter>
 #include <QSharedMemory>
+#include <QAbstractItemModel>
+#include <QPoint>
+
+
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class Exporter; }
@@ -27,53 +31,51 @@ public:
     QString pathFromIndex(const QModelIndex &idx) const override;
 };
 
+
 class QSettings;
 class QSharedMemory;
 class CorelThread;
 class A3DataBase;
+
 class Exporter : public QWidget
 {
     Q_OBJECT
-    QSharedMemory *qsm;
-    QSettings *glb;
+
 public:
+    enum DataRole {
+        ProgIdRole = Qt::UserRole,
+        ClsIdRole = Qt::UserRole + 1,
+    };
     Exporter(QWidget *parent = nullptr);
     ~Exporter();
+    void setVersionMap(const QMap<int, QPair<QString, QString>> vmap);
+    QString currentExportFolder() const;
 
 public slots:
-    void handleCorelResult(const QMap<QString, QVariant> &res);
-    void handleExportResult(const QMap<QString, QVariant> &res);
-    QString currentExportFolder() const;
-    const bool &isFirstInstance() const {return firstInstance;}
-
+    void detectResultReady(const QVariantMap& vmap);
+    void exportResultReady(const QVariantMap& vmap);
+    
 private slots:
-    QString pickExportFolder(const QString &currentDir);
+    void on_histTable_customContextMenuRequested(const QPoint&);
     void on_tbDet_clicked();
-    void updateQty();
-    void requestExport();
+    void on_tbBrowse_clicked();
+    void on_sideCheck_toggled(bool);
+    void on_pbExport_clicked();
     void on_btPdfSetting_clicked();
-    void on_saveData(const QString &p);
-    void manageNavigasi();
+    void on_lePage_textChanged(const QString&);
     void on_pbFilter_clicked();
     void on_pbDetach_clicked();
-    void updateExportFolder(const QString& name);
     void on_pushButton_clicked();
-    void comboVersiChanged(int index);
-
-private:
-    void toggleExportButton();
-    void disablesAll();
-    void enablesAll();
-    void tableContextMenu(const QPoint &pos);
-    bool firstInstance;
-    
-    A3DataBase *db;
-    Ui::Exporter *ui;
-    // CorelThread *corel;
-    QString exportName;
+    void on_comboVersi_currentIndexChanged(int);
+    void on_leQty_textChanged(const QString&);
+    void manageNavigasi();
 
 signals:
-    void exportFolderChanged(const QString &c);
-    void saveData(const QString &s);
+    void requestDetect(const QString& c);
+    void requestExport();
+
+private:
+    Ui::Exporter *ui;
 };
+
 #endif // EXPORTER_H
