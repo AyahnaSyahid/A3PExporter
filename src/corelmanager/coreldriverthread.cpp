@@ -56,4 +56,8 @@ void CorelDriverThread::export_(const QString& clsid,
     auto ax = initialize_com();
 }
 
+void CorelDriverThread::init() {
+	initialize_com();
+}
+
 void CorelDriverThread::openPdfSettings(const QString& clsid) {}

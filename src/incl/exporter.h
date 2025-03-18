@@ -34,18 +34,20 @@ public:
 
 class QSettings;
 class QSharedMemory;
-class CorelThread;
 class A3DataBase;
-
+class QThread;
+class CorelExecutor;
 class Exporter : public QWidget
 {
     Q_OBJECT
-
+    QThread *executorThread;
+    CorelExecutor *cx;
 public:
     enum DataRole {
         ProgIdRole = Qt::UserRole,
         ClsIdRole = Qt::UserRole + 1,
     };
+
     Exporter(QWidget *parent = nullptr);
     ~Exporter();
     void setVersionMap(const QMap<int, QPair<QString, QString>> vmap);
@@ -71,8 +73,9 @@ private slots:
     void manageNavigasi();
 
 signals:
-    void requestDetect(const QString& c);
-    void requestExport();
+    void requestDetect(const QString& clsid);
+    void requestExport(const QString& clsid, const QString& docId, const QString& exportPath, const QString& exportFileName);
+	void requestOpenSettings(const QString& clsid);
 
 private:
     Ui::Exporter *ui;

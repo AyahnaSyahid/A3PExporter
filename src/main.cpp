@@ -1,6 +1,5 @@
 #include "incl/exporter.h"
 #include "incl/a3database.h"
-#include "corelmanager/incl/corelmanager.h"
 #include <QApplication>
 #include <QMessageBox>
 #include <QSharedMemory>
@@ -12,14 +11,12 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
     a.setWindowIcon(QIcon(":/images/images/E.png"));
-	QDir().setCurrent(a.applicationDirPath());
-    
+    QDir().setCurrent(a.applicationDirPath());
+
 	A3DataBase adb;
-    CorelManager cm;
     Exporter w;
-    w.setVersionMap(cm.versionMap(17, 50));
-    QSharedMemory shamem("ExporterAlive");
-	
+#ifdef RELEASE_BUILD
+	QSharedMemory shamem("ExporterAlive");
 
     if( shamem.create(13) )
     {
@@ -29,6 +26,9 @@ int main(int argc, char *argv[])
         w.deleteLater();
         return 0;
     }
-    
+#else
+	
+	w.show();
+#endif
     return a.exec();
 }

@@ -17,6 +17,7 @@ public:
     bool isBussy();
 
 public slots:
+	void init();
     void detect(const QString& clsid);
     void export_(const QString& clsid,
                 const QString& documentId,

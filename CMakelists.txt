@@ -10,8 +10,15 @@ set(CMAKE_AUTORCC ON)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-# set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_BUILD_TYPE Debug)
 
+string(TOUPPER "${CMAKE_BUILD_TYPE}" BT_UPPER)
+
+if(BT_UPPER STREQUAL "DEBUG")
+	add_definitions(-D DEBUG_BUILD)
+elseif(BT_UPPER STREQUAL "RELEASE")
+	add_definitions(-D RELEASE_BUILD)
+endif()
 
 find_package(Qt5 COMPONENTS Widgets Sql AxContainer REQUIRED)
 

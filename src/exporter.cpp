@@ -3,7 +3,7 @@
 #include "incl/a3previewdatadialog.h"
 #include "incl/tentangaplikasi.h"
 #include "incl/a3database.h"
-#include "corelmanager/incl/corelmanager.h"
+#include "corelmanager/incl/corelexecutor.h"
 #include "incl/models.h"
 
 #include <QCompleter>
@@ -15,6 +15,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QDir>
+#include <QThread>
 #include <QSharedMemory>
 
 #include <QFormLayout>
@@ -58,6 +59,8 @@ QPair<int, int> parseQty(const QString& txt) {
 
 Exporter::Exporter(QWidget *parent)
     : ui(new Ui::Exporter),
+      executorThread(new QThread),
+      cx(new CorelExecutor);
       QWidget(parent)
 {
     ui->setupUi(this);

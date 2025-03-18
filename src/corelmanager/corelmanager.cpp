@@ -1,4 +1,5 @@
 #include "incl/corelmanager.h"
+#include "incl/coreldriverthread.h"
 #include "combaseapi.h"
 #include <QVector>
 #include <QMap>
@@ -9,11 +10,15 @@
 #include <QtDebug>
 
 CorelManager::CorelManager(QObject* parent)
-: workerThread(new QThread(this)), QObject()
-{ }
+: cdt(new CorelDriverThread()), workerThread(new QThread(this)), QObject()
+{
+	cdt->moveToThread(workerThread);
+	connect(workerThread, &QThread::started, cdt, &CorelDriverThread::init());
+}
 
 CorelManager::~CorelManager()
 {
+	cdt->deleteLater();
 	workerThread->quit();
 	workerThread->wait();
     workerThread->deleteLater();
@@ -34,6 +39,7 @@ QMap<int, QPair<QString, QString>> CorelManager::versionMap(int end, int start) 
     }
     return result;
 }
+
 void CorelManager::detectCurrentDocument(const QString& clsid) {}
 void CorelManager::exportDocument(const QString& clsid,
                         const QString& documentId,

@@ -6,18 +6,18 @@
 #include <QThread>
 #include <QVariantMap>
 
-
+class CorelDriverThread;
 class CorelManager : public QObject {
     Q_OBJECT
 	QThread *workerThread;
-
+	CorelDriverThread *cdt;
 public:
 	CorelManager(QObject *parent=nullptr);
     ~CorelManager();
 	QMap<int, QPair<QString, QString>> versionMap(int end=60, int start=22) const;
 
 public slots:
-    void detectCurrentDocument(const QString& clsid);
+    void detectDocument(const QString& clsid);
     void exportDocument(const QString& clsid,
                         const QString& documentId,
                         const QString& exportPath,
@@ -26,8 +26,8 @@ public slots:
     void closeDocument(const QString& clsid,
                        const QString& documentId);
 signals:
-    void detectResult(const QString& clsid, const QVariantMap& vmap);
-    void exportResult(const QString& clsid, const QVariantMap& vmap);
+    void detectFinish(const QString& clsid, const QVariantMap& vmap);
+    void exportFinish(const QString& clsid, const QVariantMap& vmap);
 };
 
 #endif // CORELMANAGER_H
