@@ -28,46 +28,32 @@
 #include <QtDebug>
 #include <QScreen>
 
-int KalkulasiJumlahHalaman(const QString &s)
-{
-    int ctr = 0;
-    QStringList sl = s.split(",",Qt::SkipEmptyParts);
-    for(auto part = sl.begin(); part != sl.end(); ++part)
-    {
-        auto temp = (*part).split("-");
-        if(temp.count() == 1)
-            ctr += 1;
-        else
-            ctr += 1 + temp.value(1).toInt() - temp.value(0).toInt();
-    }
-
-    return ctr ? ctr : -1;
-}
-
-QPair<int, int> parseQty(const QString& txt) {
-    int page, copy;
-    QStringList splitted = txt.split("@", Qt::SkipEmptyParts);
-    if(splitted.count() == 1) {
-        return {splitted[0].toInt(), splitted[0].toInt()};
-    } else if (splitted.count() == 2) {
-        page = splitted[0].toInt();
-        copy = splitted[1].toInt();
-        return {page, copy};
-    }
-    return {0, 0};
-}
-
 Exporter::Exporter(QWidget *parent)
     : ui(new Ui::Exporter),
       executorThread(new QThread),
-      cx(new CorelExecutor);
+      cx(new CorelExecutor),
       QWidget(parent)
 {
     ui->setupUi(this);
     QSettings* glb = new QSettings("conf.ini", QSettings::IniFormat, this);
     glb->setObjectName("settings");
     ui->comboVersi->clear();
-
+    
+    QSettings corelLookup("HKEY_CLASSES_ROOT", QSettings::NativeFormat);
+    QString corelWithVersion = "CorelDRAW.Application.%1";
+    
+    for(int i=14; i<100; ++i) {
+        QString vstr = QString::number(i);
+        QString ProgID = corelWithVersion.arg(i);
+        QString CLSIDKey = QString("%1/CLSID/.").arg(ProgID);
+        QString CLSID = corelLookup.value(CLSIDKey).toString();
+        if(!CLSID.isEmpty()) {
+            ui->comboVersi->addItem(vstr, ProgID);
+            int lastIndex = ui->comboVersi->findText(vstr);
+            ui->comboVersi->setItemData(lastIndex, CLSID, CLSIDRole);
+        }
+    }
+    
     ui->leExpF->setText(glb->value("Exporter/lastExportFolder").toString());
 
     QRegularExpression reQty("^[1-9]\\d*(@[1-9]\\d*)?");
@@ -114,6 +100,14 @@ Exporter::Exporter(QWidget *parent)
     
     ui->sideCheck->setEnabled(false);
     ui->sideCheck->setChecked(false);
+    
+    cx->moveToThread(executorThread);
+    
+    connect(executorThread, &QThread::started, cx, &CorelExecutor::init);
+    connect(this, &Exporter::requestDetect, cx, &CorelExecutor::runDetect);
+    connect(cx, &CorelExecutor::detectResult, this, &Exporter::detectResultReady);
+    
+    executorThread->start();
 }
 
 Exporter::~Exporter()
@@ -123,26 +117,36 @@ Exporter::~Exporter()
     delete ui;
 }
 
-void Exporter::setVersionMap(const QMap<int, QPair<QString, QString>> vm) {
-    if(vm.isEmpty()) return;
-    ui->comboVersi->clear();
-    for(auto imap=vm.cbegin(); imap != vm.cend(); ++imap) {
-        ui->comboVersi->addItem(QString::number(imap.key()), imap.value().first);
-        ui->comboVersi->setItemData(ClsIdRole, imap.value().second);
-    }
-}
-
 void Exporter::detectResultReady(const QVariantMap& res)
 {
-    if(res["Documents.Count"].toInt() == 0) {
-        ui->tbDet->setEnabled(true);
-        return;
+    waitState[QString("%1_detect").arg(res["controlName"].toString())] = false;
+    if(!res["state"].toBool()) {
+        QMessageBox::information(this, "Kesalahan", QString("Error :\n%1").arg(res["stateMessage"].toString()));
+        return ;
     }
+    ui->leDoc->clear();
+    ui->leBahan->clear();
+    ui->leQty->clear();
+    ui->leKlien->clear();
+    ui->lePage->clear();
+    ui->txKet->clear();
+    if(res["documentCount"].toInt() < 1) {
+        ui->leDoc->setText("Tidak ada file");
+    } else {
+        ui->leDoc->setText(res["fileName"].toString().isEmpty() ? res["vbaName"].toString() : res["fileName"].toString());
+        if(!res["filePath"].toString().isEmpty()) {
+            ui->leKlien->setText(QDir(res["filePath"].toString()).dirName());
+        }
+        ui->lePage->setText(res["pageCount"].toInt() > 1 ? QString("1-%1").arg(res["pageCount"].toInt()) : "1");
+    }
+    qDebug() << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
+    qDebug() << res;
+    qDebug() << "";
 }
 
 void Exporter::exportResultReady(const QVariantMap& res)
 {
-    
+    qDebug() << res;
 }
 
 QString Exporter::currentExportFolder() const
@@ -152,9 +156,14 @@ QString Exporter::currentExportFolder() const
 
 void Exporter::on_tbDet_clicked()
 {
-    ui->tbDet->setEnabled(false);
-    QString controlName;
-    controlName = ui->comboVersi->currentData(ClsIdRole).toString();
+    QString controlName, progId;
+    controlName = ui->comboVersi->currentData(CLSIDRole).toString();
+    progId = ui->comboVersi->currentData(ProgIDRole).toString();
+    if(waitState.value(QString("%1_detect").arg(controlName), false).toBool()) {
+        QMessageBox::information(this, "Silahkan menunggu", QString("Perintah deteksi untuk %1 sebelumnya belum mendapat response").arg(progId));
+        return;
+    }
+    waitState[QString("%1_detect").arg(controlName)] = true;
     emit requestDetect(controlName);
 }
 
@@ -171,6 +180,7 @@ void Exporter::on_tbBrowse_clicked()
 void Exporter::on_sideCheck_toggled(bool t) {
     emit ui->lePage->textChanged(ui->lePage->text());
 }
+
 void Exporter::on_pbExport_clicked() {}
 void Exporter::manageNavigasi() {}
 void Exporter::on_lePage_textChanged(const QString& txt)
@@ -195,6 +205,7 @@ void Exporter::on_lePage_textChanged(const QString& txt)
         else
         {
             ui->sideCheck->setEnabled(false);
+            ui->sideCheck->setChecked(false);
             if(kalk == 1)
                 ui->leQty->setText("1");
             else
@@ -222,24 +233,6 @@ void Exporter::on_leQty_textChanged(const QString& txt) {
         }
     }
 }
-
-// void Exporter::on_leQty_textChanged(const QString& txt) {
-    // auto kl = parseQty(ui->leQty->text());
-    // if(kl == QPair<int, int> {0, 0}) {
-        // ui->leQty->setToolTip("");
-    // } else {
-        // QString tbl(R";(<table cellspacing=100px><tr><td align=right><b>Lembar :</b></td><td align=right>%2</td></tr><tr><td align=right><b>Klik :</b></td><td align=right>%1</td></tr></table>);");
-        // if(ui->sideCheck->isChecked()) {
-            // ui->leQty->setToolTip(tbl
-                        // .arg(locale().toString(kl.first * 2 * kl.second))
-                        // .arg(locale().toString(kl.first * kl.second)));
-        // } else {
-            // ui->leQty->setToolTip(tbl
-                        // .arg(locale().toString(kl.first * kl.second))
-                        // .arg(locale().toString(kl.first * kl.second)));            
-        // }
-    // }
-// }
 
 // void Exporter::requestExport()
 // {
@@ -343,24 +336,6 @@ void Exporter::on_histTable_customContextMenuRequested(const QPoint &pos)
     tconMenu.exec(gp);
 }
 
-QVariant CustomClassNS::FileSystemModel::data(const QModelIndex &index, int role) const
-{
-    if(((role == Qt::EditRole) & (index.column() == 0)))
-    {
-        QString pth = QDir::fromNativeSeparators(filePath(index));
-        if(pth.endsWith("/"))
-            pth.chop(1);
-        return pth;
-    }
-    return QFileSystemModel::data(index, role);
-}
-
-QString CustomClassNS::FSCompleter::pathFromIndex(const QModelIndex &idx) const
-{
-    QString rv = model()->data(idx, Qt::EditRole).toString();
-    return rv;
-}
-
 void Exporter::on_btPdfSetting_clicked()
 {
     QVariantMap m;
@@ -450,3 +425,31 @@ void Exporter::on_comboVersi_currentIndexChanged(int index)
     // glb->sync();
 }
 
+int KalkulasiJumlahHalaman(const QString &s)
+{
+    int ctr = 0;
+    QStringList sl = s.split(",",Qt::SkipEmptyParts);
+    for(auto part = sl.begin(); part != sl.end(); ++part)
+    {
+        auto temp = (*part).split("-");
+        if(temp.count() == 1)
+            ctr += 1;
+        else
+            ctr += 1 + temp.value(1).toInt() - temp.value(0).toInt();
+    }
+
+    return ctr ? ctr : -1;
+}
+
+QPair<int, int> parseQty(const QString& txt) {
+    int page, copy;
+    QStringList splitted = txt.split("@", Qt::SkipEmptyParts);
+    if(splitted.count() == 1) {
+        return {splitted[0].toInt(), splitted[0].toInt()};
+    } else if (splitted.count() == 2) {
+        page = splitted[0].toInt();
+        copy = splitted[1].toInt();
+        return {page, copy};
+    }
+    return {0, 0};
+}

@@ -5,18 +5,28 @@
 
 class QAxObject;
 class CorelExecutor : public QObject{
+    Q_OBJECT
     QAxObject* _ax;
     
 public:
     CorelExecutor();
     ~CorelExecutor();
-    QAxObject* initialize();
-    
     
 public slots:
+    void init();
     void runExport(const QString& clsid, const QString& docid, const QString& exportPath, const QString& exportFile);
     void runDetect(const QString& clsid);
     void openSettings(const QString& clsid);
-    
+
+signals:
+    void beginDetect(const QString& CLSID);
+    void endDetect(const QString& CLSID);
+    void beginExport(const QString& CLSID);
+    void endExport(const QString& CLSID);
+    void detectResult(const QVariantMap& vm);
+    void exportResult(const QVariantMap& vm);
+
+private:
+    QAxObject* initialize();
 };
 #endif

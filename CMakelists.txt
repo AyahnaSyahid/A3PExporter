@@ -42,10 +42,8 @@ set(A3P_MAIN_SOURCES res/res.qrc
                      src/previewmodel.cpp
                      src/savetoexcelfile.cpp
                      src/tentangaplikasi.cpp
-                     src/corelmanager/corelmanager.cpp
-                     src/corelmanager/incl/corelmanager.h
-                     src/corelmanager/coreldriverthread.cpp
-                     src/corelmanager/incl/coreldriverthread.h
+                     src/corelmanager/corelexecutor.cpp
+                     src/corelmanager/incl/corelexecutor.h
                      )
 
 add_executable(A3PExporter ${A3P_MAIN_SOURCES})

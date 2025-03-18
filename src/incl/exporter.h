@@ -8,29 +8,7 @@
 #include <QAbstractItemModel>
 #include <QPoint>
 
-
-
-QT_BEGIN_NAMESPACE
 namespace Ui { class Exporter; }
-QT_END_NAMESPACE
-
-namespace CustomClassNS {
-    class FileSystemModel;
-    class FSCompleter; 
-}
-
-class CustomClassNS::FileSystemModel : public QFileSystemModel
-{
-public:
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
-};
-
-class CustomClassNS::FSCompleter : public QCompleter
-{
-public:
-    QString pathFromIndex(const QModelIndex &idx) const override;
-};
-
 
 class QSettings;
 class QSharedMemory;
@@ -44,13 +22,12 @@ class Exporter : public QWidget
     CorelExecutor *cx;
 public:
     enum DataRole {
-        ProgIdRole = Qt::UserRole,
-        ClsIdRole = Qt::UserRole + 1,
+        ProgIDRole = Qt::UserRole,
+        CLSIDRole = Qt::UserRole + 1,
     };
 
     Exporter(QWidget *parent = nullptr);
     ~Exporter();
-    void setVersionMap(const QMap<int, QPair<QString, QString>> vmap);
     QString currentExportFolder() const;
 
 public slots:
@@ -79,6 +56,10 @@ signals:
 
 private:
     Ui::Exporter *ui;
+    QVariantMap waitState;
 };
+
+int KalkulasiJumlahHalaman(const QString &s);
+QPair<int, int> parseQty(const QString& txt);
 
 #endif // EXPORTER_H
