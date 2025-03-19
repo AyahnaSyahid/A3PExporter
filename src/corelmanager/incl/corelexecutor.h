@@ -2,6 +2,7 @@
 #define CorelExecutorH
 
 #include <QObject>
+#include <QVariant>
 
 class QAxObject;
 class CorelExecutor : public QObject{
@@ -14,7 +15,7 @@ public:
     
 public slots:
     void init();
-    void runExport(const QString& clsid, const QString& docid, const QString& exportPath, const QString& exportFile);
+    void runExport(const QString& clsid, const QString& docid, const QString& pageString, const QString& exportPath, const QString& exportFile);
     void runDetect(const QString& clsid);
     void openSettings(const QString& clsid);
 
@@ -25,8 +26,13 @@ signals:
     void endExport(const QString& CLSID);
     void detectResult(const QVariantMap& vm);
     void exportResult(const QVariantMap& vm);
+    void pdfSettingsOpen(const QString& s);
+    void pdfSettingsClosed(const QString& s);
+    void pdfSettingsChanged(const QVariantMap&);
+    void pdfSettingsResult(const QVariantMap&);
 
 private:
     QAxObject* initialize();
+    QVariantMap PDFSettingsBag;
 };
 #endif

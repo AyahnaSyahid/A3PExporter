@@ -106,6 +106,9 @@ Exporter::Exporter(QWidget *parent)
     connect(executorThread, &QThread::started, cx, &CorelExecutor::init);
     connect(this, &Exporter::requestDetect, cx, &CorelExecutor::runDetect);
     connect(cx, &CorelExecutor::detectResult, this, &Exporter::detectResultReady);
+    connect(this, &Exporter::requestOpenSettings, cx, &CorelExecutor::openSettings);
+    connect(cx, &CorelExecutor::pdfSettingsChanged, this, &Exporter::pdfSettingsChanged);
+    connect(cx, &CorelExecutor::pdfSettingsResult, this, &Exporter::pdfSettingsResult);
     
     executorThread->start();
 }
@@ -139,14 +142,30 @@ void Exporter::detectResultReady(const QVariantMap& res)
         }
         ui->lePage->setText(res["pageCount"].toInt() > 1 ? QString("1-%1").arg(res["pageCount"].toInt()) : "1");
     }
-    qDebug() << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
-    qDebug() << res;
-    qDebug() << "";
+}
+
+void Exporter::pdfSettingsResult(const QVariantMap& res) {
+    waitState[QString("%1_openSettings").arg(res["controlName"].toString())] = false;
+    if(!res["state"].toBool()) {
+        QMessageBox::information(this, "Kesalahan", QString("Error :\n%1").arg(res["stateMessage"].toString()));
+        return ;
+    }
 }
 
 void Exporter::exportResultReady(const QVariantMap& res)
 {
     qDebug() << res;
+}
+
+void Exporter::pdfSettingsChanged(const QVariantMap& m){
+    QMessageBox msgBox(QMessageBox::Question, "Konfirmasi Perubahan", "Perubahan parameter PDF terdeteksi terapkan perubahan?");
+    msgBox.addButton("Hanya Sekali", QMessageBox::RejectRole);
+    msgBox.addButton("Selamanya", QMessageBox::AcceptRole);
+    if( msgBox.exec() == QMessageBox::Accepted ) {
+        QSettings* glb = findChild<QSettings*>("settings");
+        glb->setValue("PDFSettings", m);
+        glb->sync();
+    }
 }
 
 QString Exporter::currentExportFolder() const
@@ -165,6 +184,19 @@ void Exporter::on_tbDet_clicked()
     }
     waitState[QString("%1_detect").arg(controlName)] = true;
     emit requestDetect(controlName);
+}
+
+void Exporter::on_btPdfSetting_clicked()
+{
+    QString controlName, progId;
+    controlName = ui->comboVersi->currentData(CLSIDRole).toString();
+    progId = ui->comboVersi->currentData(ProgIDRole).toString();
+    if(waitState.value(QString("%1_openSettings").arg(controlName), false).toBool()) {
+        QMessageBox::information(this, "Silahkan menunggu", QString("Perintah OpenSettings untuk %1 sebelumnya belum mendapat response").arg(progId));
+        return;
+    }
+    waitState[QString("%1_openSettings").arg(controlName)] = true;
+    emit requestOpenSettings(controlName);
 }
 
 void Exporter::on_tbBrowse_clicked()
@@ -334,15 +366,6 @@ void Exporter::on_histTable_customContextMenuRequested(const QPoint &pos)
 
     QPoint gp = ui->histTable->mapToGlobal(pos);
     tconMenu.exec(gp);
-}
-
-void Exporter::on_btPdfSetting_clicked()
-{
-    QVariantMap m;
-    m.insert("taskType", "openSettings");
-    m["corelVersion"] = ui->comboVersi->currentData(Qt::UserRole + 1);
-    // auto *mgr = SingletonNS::manager;
-    // emit mgr->sett(m);
 }
 
 // void Exporter::manageNavigasi()

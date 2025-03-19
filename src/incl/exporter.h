@@ -33,6 +33,8 @@ public:
 public slots:
     void detectResultReady(const QVariantMap& vmap);
     void exportResultReady(const QVariantMap& vmap);
+    void pdfSettingsResult(const QVariantMap&);
+    void pdfSettingsChanged(const QVariantMap&);
     
 private slots:
     void on_histTable_customContextMenuRequested(const QPoint&);
@@ -51,7 +53,7 @@ private slots:
 
 signals:
     void requestDetect(const QString& clsid);
-    void requestExport(const QString& clsid, const QString& docId, const QString& exportPath, const QString& exportFileName);
+    void requestExport(const QString& clsid, const QString& docId, const QString& pageString, const QString& exportPath, const QString& exportFileName);
 	void requestOpenSettings(const QString& clsid);
 
 private:

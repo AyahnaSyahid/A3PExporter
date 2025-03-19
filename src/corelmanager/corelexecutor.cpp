@@ -1,6 +1,7 @@
 #include "incl/corelexecutor.h"
 #include "combaseapi.h"
 #include <QAxObject>
+#include <QSettings>
 
 CorelExecutor::CorelExecutor()
  :  _ax(nullptr), QObject() {}
@@ -32,6 +33,7 @@ void CorelExecutor::runDetect(const QString& CLSID) {
     QVariantMap res;
     res.insert("controlName", CLSID);
     bool ok = com->setControl(CLSID);
+    res.insert("state", true);
     if(!ok) {
         res.insert("state", false);
         res.insert("stateMessage", "setControl Gagal (false)");
@@ -39,7 +41,6 @@ void CorelExecutor::runDetect(const QString& CLSID) {
         emit endDetect(CLSID);
         return;
     }
-    res.insert("state", true);
     res.insert("stateMessage", QString("setControl Success (%1)").arg(CLSID));
     auto docs = com->querySubObject("Documents");
     int docCount = docs->property("Count").toInt();
@@ -60,5 +61,78 @@ void CorelExecutor::runDetect(const QString& CLSID) {
     emit endDetect(CLSID);
 }
 
-void CorelExecutor::runExport(const QString& clsid, const QString& docid, const QString& exportPath, const QString& exportFile) {}
-void CorelExecutor::openSettings(const QString& clsid) {}
+void CorelExecutor::runExport(const QString& CLSID,
+                              const QString& docid,
+                              const QString& pagesString,
+                              const QString& exportPath,
+                              const QString& exportFile) {
+    auto com = initialize();
+    emit beginExport(CLSID);
+    QVariantMap res;
+    res.insert("controlName", CLSID);
+    bool ok = com->setControl(CLSID);
+    res.insert("state", ok);
+    if(!ok) {
+        res.insert("stateMessage", "setControl Gagal (false)");
+        emit exportResult(res);
+        emit endExport(CLSID);
+        return;
+    }
+    /* docId masih belum bisa di implementasi untuk sekarang gunakan ActiveDocument
+    */
+    int docCount = com->querySubObject("Documents")->property("Count").toInt();
+    if(docCount < 1) {
+        res["state"] = false;
+        res.insert("stateMessage", "Tidak menemukan Dokumen terbuka");
+        emit exportResult(res);
+        emit endExport(CLSID);
+        return;
+    }
+    auto act = com->querySubObject("ActiveDocument");
+    auto pdfs = act->querySubObject("PDFSettings");
+    if(PDFSettingsBag.count() > 1) {
+        pdfs->setPropertyBag(PDFSettingsBag);
+        pdfs->setProperty("PageRange", pagesString);
+        PDFSettingsBag.clear();
+    } else {
+        QSettings* glb = sender()->findChild<QSettings*>("settings");
+        auto eset = glb->value("PDFSettings");
+        if(eset.isValid()) {
+            pdfs->setPropertyBag(eset.toMap());
+            pdfs->setProperty("PageRange", pagesString);
+        }
+    }
+    
+}
+
+void CorelExecutor::openSettings(const QString& CLSID) {
+    auto com = initialize();
+    QVariantMap res;
+    res.insert("controlName", CLSID);
+    bool ok = com->setControl(CLSID);
+    res.insert("state", ok);
+    if(!ok) {
+        res.insert("stateMessage", "setControl Gagal (false)");
+        return;
+    }
+    res.insert("stateMessage", "setControl Success (true)");
+    int docCount = com->querySubObject("Documents")->property("Count").toInt();
+    res.insert("documentCount", docCount);
+    if(docCount < 1) {
+        res["state"] = false;
+        res["stateMessage"] = "Tidak ada document terbuka";
+        emit pdfSettingsResult(res);
+        return;
+    }
+    auto act = com->querySubObject("ActiveDocument");
+    emit pdfSettingsOpen(CLSID);
+    auto pset = act->querySubObject("PDFSettings");
+    bool saved = pset->dynamicCall("ShowDialog()").toBool();
+    emit pdfSettingsClosed(CLSID);
+    emit pdfSettingsResult(res);
+    if(saved) {
+        emit pdfSettingsChanged(pset->propertyBag());
+    } else {
+        PDFSettingsBag = pset->propertyBag();
+    }
+}
