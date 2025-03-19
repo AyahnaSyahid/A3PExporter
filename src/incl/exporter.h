@@ -53,7 +53,7 @@ private slots:
 
 signals:
     void requestDetect(const QString& clsid);
-    void requestExport(const QString& clsid, const QString& docId, const QString& pageString, const QString& exportPath, const QString& exportFileName);
+    void requestExport(const QVariantMap& param);
 	void requestOpenSettings(const QString& clsid);
 
 private:

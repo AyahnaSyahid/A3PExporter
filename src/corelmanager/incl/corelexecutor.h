@@ -15,7 +15,7 @@ public:
     
 public slots:
     void init();
-    void runExport(const QString& clsid, const QString& docid, const QString& pageString, const QString& exportPath, const QString& exportFile);
+    void runExport(const QVariantMap& params);
     void runDetect(const QString& clsid);
     void openSettings(const QString& clsid);
 

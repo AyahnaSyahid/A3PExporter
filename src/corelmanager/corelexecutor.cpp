@@ -61,11 +61,8 @@ void CorelExecutor::runDetect(const QString& CLSID) {
     emit endDetect(CLSID);
 }
 
-void CorelExecutor::runExport(const QString& CLSID,
-                              const QString& docid,
-                              const QString& pagesString,
-                              const QString& exportPath,
-                              const QString& exportFile) {
+void CorelExecutor::runExport(const QVariantMap& params) {
+    QString CLSID = params["CLSID"].toString();
     auto com = initialize();
     emit beginExport(CLSID);
     QVariantMap res;
@@ -92,16 +89,22 @@ void CorelExecutor::runExport(const QString& CLSID,
     auto pdfs = act->querySubObject("PDFSettings");
     if(PDFSettingsBag.count() > 1) {
         pdfs->setPropertyBag(PDFSettingsBag);
-        pdfs->setProperty("PageRange", pagesString);
+        pdfs->setProperty("PageRange", params["PageRange"]);
         PDFSettingsBag.clear();
     } else {
         QSettings* glb = sender()->findChild<QSettings*>("settings");
         auto eset = glb->value("PDFSettings");
         if(eset.isValid()) {
             pdfs->setPropertyBag(eset.toMap());
-            pdfs->setProperty("PageRange", pagesString);
+            pdfs->setProperty("PageRange", params["PageRange"]);
         }
     }
+    QTemporaryFile tfile("ExporterTemp-XXXXXXXXXXXX.pdf");
+    tfile.setAutoRemove(false);
+    tfile.open();
+    res.insert("tempFile", tfile.fileName());
+    tfile.close();
+    bool exportOk = act->dynamicCall("PublishToPdf(const QString&)", tfile.fileName());
     
 }
 
