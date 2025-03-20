@@ -1,7 +1,16 @@
 #include "incl/corelexecutor.h"
 #include "combaseapi.h"
 #include <QAxObject>
+#include <QTemporaryFile>
 #include <QSettings>
+#include <QtDebug>
+
+void printExc(int i, QString s1, QString s2, QString s3) {
+    qDebug() << i;
+    qDebug() << s1;
+    qDebug() << s2;
+    qDebug() << s3;
+}
 
 CorelExecutor::CorelExecutor()
  :  _ax(nullptr), QObject() {}
@@ -41,6 +50,7 @@ void CorelExecutor::runDetect(const QString& CLSID) {
         emit endDetect(CLSID);
         return;
     }
+    // connect(com, &QAxObject::exception, &printExc);
     res.insert("stateMessage", QString("setControl Success (%1)").arg(CLSID));
     auto docs = com->querySubObject("Documents");
     int docCount = docs->property("Count").toInt();
@@ -77,6 +87,7 @@ void CorelExecutor::runExport(const QVariantMap& params) {
     }
     /* docId masih belum bisa di implementasi untuk sekarang gunakan ActiveDocument
     */
+    // connect(com, &QAxObject::exception, &printExc);
     int docCount = com->querySubObject("Documents")->property("Count").toInt();
     if(docCount < 1) {
         res["state"] = false;
@@ -104,8 +115,11 @@ void CorelExecutor::runExport(const QVariantMap& params) {
     tfile.open();
     res.insert("tempFile", tfile.fileName());
     tfile.close();
-    bool exportOk = act->dynamicCall("PublishToPdf(const QString&)", tfile.fileName());
+    act->dynamicCall("PublishToPdf(const QString&)", tfile.fileName());
+    res["exportPath"] = params["exportPath"];
+    res["exportName"] = params["exportName"];
     
+    emit exportResult(res);
 }
 
 void CorelExecutor::openSettings(const QString& CLSID) {
@@ -118,6 +132,7 @@ void CorelExecutor::openSettings(const QString& CLSID) {
         res.insert("stateMessage", "setControl Gagal (false)");
         return;
     }
+    // connect(com, SIGNAL(exception(int, QString, QString, QString)), &printExc);
     res.insert("stateMessage", "setControl Success (true)");
     int docCount = com->querySubObject("Documents")->property("Count").toInt();
     res.insert("documentCount", docCount);
