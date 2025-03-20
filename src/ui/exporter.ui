@@ -236,7 +236,7 @@
           <item row="5" column="4">
            <widget class="QPushButton" name="pbExport">
             <property name="enabled">
-             <bool>false</bool>
+             <bool>true</bool>
             </property>
             <property name="text">
              <string>Export</string>

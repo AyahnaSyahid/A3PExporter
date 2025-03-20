@@ -109,6 +109,8 @@ Exporter::Exporter(QWidget *parent)
     connect(this, &Exporter::requestOpenSettings, cx, &CorelExecutor::openSettings);
     connect(cx, &CorelExecutor::pdfSettingsChanged, this, &Exporter::pdfSettingsChanged);
     connect(cx, &CorelExecutor::pdfSettingsResult, this, &Exporter::pdfSettingsResult);
+    connect(this, &Exporter::requestExport, cx, &CorelExecutor::runExport);
+    connect(cx, &CorelExecutor::exportResult, this, &Exporter::exportResultReady);
     
     executorThread->start();
 }
@@ -131,6 +133,7 @@ void Exporter::detectResultReady(const QVariantMap& res)
     ui->leBahan->clear();
     ui->leQty->clear();
     ui->leKlien->clear();
+    ui->leFile->clear();
     ui->lePage->clear();
     ui->txKet->clear();
     if(res["documentCount"].toInt() < 1) {
@@ -141,6 +144,8 @@ void Exporter::detectResultReady(const QVariantMap& res)
             ui->leKlien->setText(QDir(res["filePath"].toString()).dirName());
         }
         ui->lePage->setText(res["pageCount"].toInt() > 1 ? QString("1-%1").arg(res["pageCount"].toInt()) : "1");
+        QString baseName = QFileInfo(res["vbaName"].toString()).baseName();
+        ui->leFile->setText(baseName.replace("_", "-").toUpper());
     }
 }
 
@@ -154,7 +159,49 @@ void Exporter::pdfSettingsResult(const QVariantMap& res) {
 
 void Exporter::exportResultReady(const QVariantMap& res)
 {
-    qDebug() << res;
+    waitState[QString("%1_export").arg(res["controlName"].toString())] = false;
+    if(!res["state"].toBool()) {
+        QMessageBox::information(this, "Kesalahan", QString("Error :\n%1").arg(res["stateMessage"].toString()));
+        return ;
+    }
+    QFile exported(res["tempFile"].toString());
+    if(!exported.exists()) {
+        QMessageBox::critical(this, "Kesalahan", "File export tidak ditemukan");
+        return;
+    }
+    QDir exportPath(res["exportPath"].toString());
+    if(exportPath.exists(res["exportName"].toString())) {
+        // Pertimbangkan untuk membuat loop dialog sampai proses pemindahan dan atau penghapusan file temporer berhasil
+        QMessageBox::critical(this, "Duplikasi file ditemukan", "Anda dapat membatalkan atau menyimpan dengan nama file berbeda pada dialog selanjutnya");
+        QString saveAs = QFileDialog::getSaveFileName(this, "Simpan sebagai", exportPath.absoluteFilePath(res["exportName"].toString()), ("PDF File (*.pdf)"));
+        if(saveAs.isEmpty()) {
+            if(exported.remove()) {
+                QMessageBox::information(this, "Informasi", "Export dibatalkan");
+                return ;
+            } else {
+                QMessageBox::information(this, "Informasi", "Gagal menghapus berkas sementara, anda harus menghapusnya secara manual");
+                QProcess::startDetached("C:\\Windows\\explorer.exe", QStringList() << QFileInfo(res["tempFile"].toString()).absolutePath());
+                return;
+            }
+        } else {
+            QFileInfo sa(saveAs);
+            if(sa.exists()) {
+                QFile saf(saveAs);
+                bool rmsuc = saf.remove();
+                if(!rmsuc) {
+                    QMessageBox::information(this, "Informasi", "Gagal menghapus berkas target");
+                    return;
+                }
+            }
+            bool eok = exported.rename(saveAs);
+            if(!eok)
+                QMessageBox::information(this, "Informasi", "Gagal menyimpan file export");
+            return ;
+        }
+    }    
+    bool eok = exported.rename(exportPath.absoluteFilePath(res["exportName"].toString()));
+    if(!eok)
+        QMessageBox::information(this, "Informasi", "Gagal menyimpan file export");
 }
 
 void Exporter::pdfSettingsChanged(const QVariantMap& m){
@@ -213,7 +260,63 @@ void Exporter::on_sideCheck_toggled(bool t) {
     emit ui->lePage->textChanged(ui->lePage->text());
 }
 
-void Exporter::on_pbExport_clicked() {}
+void Exporter::on_pbExport_clicked() {
+    QString controlName, progId;
+    controlName = ui->comboVersi->currentData(CLSIDRole).toString();
+    progId = ui->comboVersi->currentData(ProgIDRole).toString();
+    if(waitState.value(QString("%1_export").arg(controlName), false).toBool()) {
+        QMessageBox::information(this, "Silahkan menunggu", QString("Perintah Export untuk %1 sebelumnya belum mendapat response").arg(progId));
+        return;
+    }
+    QString klien, fname, bhn, pr, qtys;
+    auto lmsg = [=](QWidget *which, const QString msg) {
+        QMessageBox::information(this, "Kesalahan Input", msg);
+        which->setFocus(Qt::OtherFocusReason);
+    };
+    if(ui->leKlien->text().isEmpty()) {
+        lmsg(ui->leKlien, "Nama Konsumen tidak boleh kosong");
+        return;
+    }
+    klien = ui->leKlien->text().replace("_", "-").toUpper();
+    if(ui->leFile->text().isEmpty()) {
+        lmsg(ui->leFile, "Nama File tidak boleh kosong");
+        return;
+    }
+    fname = ui->leFile->text().replace("_", "-").toUpper();
+    if(!ui->comboBox->currentText().isEmpty()) {
+        fname = QString("%1 - %2").arg(ui->comboBox->currentText(), fname);
+    }
+    if(ui->leBahan->text().isEmpty()) {
+        lmsg(ui->leBahan, "Nama Bahan tidak boleh kosong");
+        return;
+    }
+    bhn = ui->leBahan->text().replace("_", "-").toUpper();
+    if(ui->lePage->text().isEmpty()) {
+        lmsg(ui->lePage, "PageRange tidak boleh kosong");
+        return;
+    }
+    if(ui->leQty->text().isEmpty()) {
+        lmsg(ui->leQty, "Qty tidak boleh kosong");
+        return;
+    }
+    qtys = ui->leQty->text();
+    if(ui->sideCheck->isChecked()) {
+        qtys += "_BB";
+    }
+    if(!ui->txKet->toPlainText().isEmpty()) {
+        qtys += QString("_%1").arg(ui->txKet->toPlainText().toUpper());
+    }
+    QStringList vars = {klien, fname, bhn, qtys};
+    QVariantMap ep;
+    ep["CLSID"] = controlName;
+    ep["PageRange"] = ui->lePage->text();
+    ep["exportPath"] = ui->leExpF->text();
+    ep["exportName"] = vars.join("_") + ".pdf";
+    waitState[QString("%1_export").arg(controlName)] = true;
+    
+    emit requestExport(ep);
+}
+
 void Exporter::manageNavigasi() {}
 void Exporter::on_lePage_textChanged(const QString& txt)
 {
