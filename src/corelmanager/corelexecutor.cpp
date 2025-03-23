@@ -85,9 +85,6 @@ void CorelExecutor::runExport(const QVariantMap& params) {
         emit endExport(CLSID);
         return;
     }
-    /* docId masih belum bisa di implementasi untuk sekarang gunakan ActiveDocument
-    */
-    // connect(com, &QAxObject::exception, &printExc);
     int docCount = com->querySubObject("Documents")->property("Count").toInt();
     if(docCount < 1) {
         res["state"] = false;
@@ -98,18 +95,20 @@ void CorelExecutor::runExport(const QVariantMap& params) {
     }
     auto act = com->querySubObject("ActiveDocument");
     auto pdfs = act->querySubObject("PDFSettings");
-    if(PDFSettingsBag.count() > 1) {
-        pdfs->setPropertyBag(PDFSettingsBag);
-        pdfs->setProperty("PageRange", params["PageRange"]);
-        PDFSettingsBag.clear();
-    } else {
+    auto bags =  PDFSettingsBag;
+    if(bags.count() < 1) {
         QSettings* glb = sender()->findChild<QSettings*>("settings");
         auto eset = glb->value("PDFSettings");
         if(eset.isValid()) {
-            pdfs->setPropertyBag(eset.toMap());
-            pdfs->setProperty("PageRange", params["PageRange"]);
+            bags = eset.toMap();
         }
     }
+    
+    bags["PageRange"] = params["PageRange"];
+    // bags["UseColorProfile"] = true;
+    
+    pdfs->setPropertyBag(bags);
+    
     QTemporaryFile tfile("ExporterTemp-XXXXXXXXXXXX.pdf");
     tfile.setAutoRemove(false);
     tfile.open();
@@ -119,6 +118,7 @@ void CorelExecutor::runExport(const QVariantMap& params) {
     res["exportPath"] = params["exportPath"];
     res["exportName"] = params["exportName"];
     
+    PDFSettingsBag.clear();
     emit exportResult(res);
 }
 

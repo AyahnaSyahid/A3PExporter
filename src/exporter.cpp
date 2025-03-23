@@ -200,8 +200,12 @@ void Exporter::exportResultReady(const QVariantMap& res)
         }
     }    
     bool eok = exported.rename(exportPath.absoluteFilePath(res["exportName"].toString()));
-    if(!eok)
+    if(!eok) {
         QMessageBox::information(this, "Informasi", "Gagal menyimpan file export");
+    } else {
+        emit this->exported(exported.fileName());
+        qDebug() << exported.fileName();
+    }
 }
 
 void Exporter::pdfSettingsChanged(const QVariantMap& m){
@@ -326,118 +330,37 @@ void Exporter::on_lePage_textChanged(const QString& txt)
     lastCopy = (second == 0) ? 1 : second;
     if(kalk > 0)
     { 
-        if(!(kalk % 2))
-        {
+        if(!(kalk % 2)) {
             ui->sideCheck->setEnabled(true);
-            if(ui->sideCheck->isChecked())
-                if(kalk / 2 > 1)
-                    ui->leQty->setText(QString("%1@%2").arg(kalk / 2).arg(lastCopy));
-                else
-                    ui->leQty->setText(QString("%1").arg(kalk / 2));
-            else
+            if(lastCopy > 1)
                 ui->leQty->setText(QString("%1@%2").arg(kalk).arg(lastCopy));
-        }
-        else
-        {
-            ui->sideCheck->setEnabled(false);
-            ui->sideCheck->setChecked(false);
-            if(kalk == 1)
-                ui->leQty->setText("1");
-            else
+            else 
+                ui->leQty->setText(QString("%1").arg(kalk));
+        } else {
+            if(lastCopy > 1)
                 ui->leQty->setText(QString("%1@%2").arg(kalk).arg(lastCopy));
+            else 
+                ui->leQty->setText(QString("%1").arg(kalk));
         }
+        return ;
     }
+    ui->leQty->setText(QString::number(kalk));
 }
 
 void Exporter::on_leQty_textChanged(const QString& txt) {
-    auto kl = parseQty(ui->leQty->text());
-    if (kl == QPair<int, int>{0, 0}) {
-        ui->leQty->setToolTip("");
-    } else {
+    auto kl = parseQty(txt);
+    if (kl != QPair<int, int>{0, 0}) {
         QString tbl(R"(<style>table { border-spacing: 10px; } td { padding: 2px; }</style>
-                    <table><tr><td align='right'><b>Lembar :</b></td><td align='right'>%2</td></tr>
-                    <tr><td align='right'><b>Klik :</b></td><td align='right'>%1</td></tr></table>)");
-        if (ui->sideCheck->isChecked()) {
-            ui->leQty->setToolTip(tbl
-                        .arg(locale().toString(kl.first * 2 * kl.second))
-                        .arg(locale().toString(kl.first * kl.second)));
-        } else {
-            ui->leQty->setToolTip(tbl
-                        .arg(locale().toString(kl.first * kl.second))
-                        .arg(locale().toString(kl.first * kl.second)));
-        }
+                    <table><tr><td align='right'><b>Lembar :</b></td><td align='right'>%1</td></tr>
+                    <tr><td align='right'><b>Klik :</b></td><td align='right'>%2</td></tr></table>)");
+        bool isBB = ui->sideCheck->isChecked();
+        ui->leQty->setToolTip(tbl
+                    .arg(locale().toString(kl.first))
+                    .arg(locale().toString(kl.second * (isBB ? 2 : 1))));
+        return ;
     }
+    ui->leQty->setToolTip("");
 }
-
-// void Exporter::requestExport()
-// {
-    // QVariantMap m;
-    // m.insert("taskType", "export");
-    // QString targetFileName = QString("%1_%2_%3_%4")
-            // .arg(ui->leKlien->text().simplified().remove("_").toUpper(),
-                 // ui->leFile->text().simplified().remove("_").toUpper(),
-                 // ui->leBahan->text().simplified().remove("_").toUpper(),
-                 // ui->leQty->text().simplified().remove("_").toUpper());
-    // if(ui->sideCheck->isChecked())
-        // targetFileName += "_BB";
-    // if(ui->txKet->toPlainText().simplified().toUpper().length())
-        // targetFileName += QString("_%1").arg(ui->txKet->toPlainText().simplified().toUpper());
-    // targetFileName += ".pdf";
-    // m.insert("autoCurves", ui->kurvaOto->isChecked());
-    // m.insert("pageRange", ui->lePage->text());
-    // m.insert("fileName", targetFileName);
-    // m.insert("dirName", ui->leExpF->text());
-    // auto *mgr = SingletonNS::manager;
-    // m["corelVersion"] = ui->comboVersi->currentData(Qt::UserRole + 1);
-    // emit mgr->exp(m);
-// }
-
-// void Exporter::toggleExportButton()
-// {
-    // exportName = "";
-    // if(ui->pbExport->isEnabled())
-        // ui->pbExport->setDisabled(true);
-    // if(ui->leExpF->text().isEmpty())
-        // return;
-    // else {
-        // auto fexist = QFileInfo::exists(ui->leExpF->text());
-        // if(!fexist)
-            // return;
-        // if(!QFileInfo(ui->leExpF->text()).isDir())
-            // return;
-    // }
-    // exportName += ui->leExpF->text();
-    // exportName += "/";
-
-    // if(ui->leKlien->text().isEmpty())
-        // return;
-    // exportName += ui->leKlien->text();
-
-    // if(ui->leFile->text().isEmpty())
-        // return;
-    // exportName += "_";
-    // exportName += ui->leFile->text();
-
-    // if(ui->leBahan->text().isEmpty())
-        // return ;
-    // exportName += "_";
-    // exportName += ui->leBahan->text();
-
-    // if(ui->leQty->text().isEmpty())
-        // return;
-    // exportName += "_";
-    // exportName += ui->leQty->text();
-
-    // if(ui->sideCheck->isChecked())
-    // {
-        // exportName += "_BB";
-    // }
-
-    // QString ket = ui->txKet->toPlainText().simplified();
-    // if(ket.length())
-        // exportName += QString("_%1").arg(ket);
-    // ui->pbExport->setEnabled(true);
-// }
 
 void Exporter::on_histTable_customContextMenuRequested(const QPoint &pos)
 {

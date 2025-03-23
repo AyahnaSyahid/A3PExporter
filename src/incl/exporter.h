@@ -54,6 +54,7 @@ private slots:
 signals:
     void requestDetect(const QString& clsid);
     void requestExport(const QVariantMap& param);
+    void exported(const QString& fullPath);
 	void requestOpenSettings(const QString& clsid);
 
 private:
