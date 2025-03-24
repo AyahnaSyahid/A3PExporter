@@ -12,6 +12,7 @@ class CorelExecutor : public QObject{
 public:
     CorelExecutor();
     ~CorelExecutor();
+    void enableAutoCurve(const QString&, bool);
     
 public slots:
     void init();

@@ -49,6 +49,9 @@ private slots:
     void on_pushButton_clicked();
     void on_comboVersi_currentIndexChanged(int);
     void on_leQty_textChanged(const QString&);
+    void on_actionToggleHistory_triggered();
+    void on_A3PDataModel_filterChanged();
+    void on_kurvaOto_toggled(bool);
     void manageNavigasi();
 
 signals:
@@ -56,6 +59,7 @@ signals:
     void requestExport(const QVariantMap& param);
     void exported(const QString& fullPath);
 	void requestOpenSettings(const QString& clsid);
+    void kurvaOtoChanged(const QString& CLSID, bool);
 
 private:
     Ui::Exporter *ui;

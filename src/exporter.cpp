@@ -34,11 +34,13 @@ Exporter::Exporter(QWidget *parent)
       cx(new CorelExecutor),
       QWidget(parent)
 {
+    A3PDataModel* model = new A3PDataModel(this);
+    model->setObjectName("A3PDataModel");
     ui->setupUi(this);
     QSettings* glb = new QSettings("conf.ini", QSettings::IniFormat, this);
     glb->setObjectName("settings");
     ui->comboVersi->clear();
-    
+    addAction(ui->actionToggleHistory);
     QSettings corelLookup("HKEY_CLASSES_ROOT", QSettings::NativeFormat);
     QString corelWithVersion = "CorelDRAW.Application.%1";
     
@@ -68,10 +70,9 @@ Exporter::Exporter(QWidget *parent)
 
     ui->kurvaOto->setChecked(true);
     
-    A3PDataModel* model = new A3PDataModel(this);
-    model->setObjectName("A3PDataModel");
     model->setMaxRow(200);
     model->setFilter();
+    model->select();
     ui->histTable->setModel(model);
     ui->histTable->hideColumn(0);
     ui->histTable->hideColumn(1);
@@ -111,7 +112,7 @@ Exporter::Exporter(QWidget *parent)
     connect(cx, &CorelExecutor::pdfSettingsResult, this, &Exporter::pdfSettingsResult);
     connect(this, &Exporter::requestExport, cx, &CorelExecutor::runExport);
     connect(cx, &CorelExecutor::exportResult, this, &Exporter::exportResultReady);
-    
+    connect(this, &Exporter::kurvaOtoChanged, cx, &CorelExecutor::enableAutoCurve);
     executorThread->start();
 }
 
@@ -203,8 +204,9 @@ void Exporter::exportResultReady(const QVariantMap& res)
     if(!eok) {
         QMessageBox::information(this, "Informasi", "Gagal menyimpan file export");
     } else {
-        emit this->exported(exported.fileName());
-        qDebug() << exported.fileName();
+        QFileInfo fi(exported);
+        emit this->exported(fi.fileName());
+        // qDebug() << fi.fileName();
     }
 }
 
@@ -264,7 +266,8 @@ void Exporter::on_sideCheck_toggled(bool t) {
     emit ui->lePage->textChanged(ui->lePage->text());
 }
 
-void Exporter::on_pbExport_clicked() {
+void Exporter::on_pbExport_clicked()
+{
     QString controlName, progId;
     controlName = ui->comboVersi->currentData(CLSIDRole).toString();
     progId = ui->comboVersi->currentData(ProgIDRole).toString();
@@ -321,7 +324,12 @@ void Exporter::on_pbExport_clicked() {
     emit requestExport(ep);
 }
 
-void Exporter::manageNavigasi() {}
+void Exporter::manageNavigasi()
+{
+    A3PDataModel* amd = findChild<A3PDataModel*>("A3PDataModel");
+    
+}
+
 void Exporter::on_lePage_textChanged(const QString& txt)
 {
     int kalk = KalkulasiJumlahHalaman(txt);
@@ -394,19 +402,6 @@ void Exporter::on_histTable_customContextMenuRequested(const QPoint &pos)
     tconMenu.exec(gp);
 }
 
-// void Exporter::manageNavigasi()
-// {
-    // A3PDataModel *model = qobject_cast<A3PDataModel*>(ui->histTable->model());
-    // if (model) {
-		// ui->btNext->setEnabled(model->hasNextPage());
-		// ui->btPrev->setEnabled(model->hasPrevPage());
-		// ui->btFirst->setEnabled(model->hasPrevPage());
-		// ui->btLast->setEnabled(model->hasNextPage());
-		// ui->spHalaman->setValue(model->currentPage() + 1);
-		// ui->spHalaman->setSuffix(QString("/%1").arg(model->maxPage()));
-	// }
-// }
-
 void Exporter::on_pbFilter_clicked()
 {
     A3PDataModel *mod = findChild<A3PDataModel*>("A3PDataModel");
@@ -442,11 +437,6 @@ void Exporter::on_pbDetach_clicked()
     connect(prvDlg, &A3PreviewDataDialog::destroyed, prvDlg, &A3PreviewDataDialog::deleteLater);
 }
 
-// void Exporter::updateExportFolder(const QString &name)
-// {
-    // glb->setValue("Exporter/lastExportFolder", name);
-// }
-
 void Exporter::on_pushButton_clicked()
 {
     TentangAplikasi *ta = new TentangAplikasi();
@@ -472,6 +462,35 @@ void Exporter::on_comboVersi_currentIndexChanged(int index)
     // }
     // glb->setValue("CorelApplication/useVersion", _new);
     // glb->sync();
+}
+
+void Exporter::on_actionToggleHistory_triggered()
+{
+    auto hidden = ui->histGroup->isHidden();
+    ui->histGroup->setHidden(!hidden);
+    setMaximumWidth(hidden ? 578 : 251);
+    adjustSize();
+}
+
+void Exporter::on_A3PDataModel_filterChanged()
+{
+    A3PDataModel* md = qobject_cast<A3PDataModel*>(sender());
+    if(!md) return;
+    int minPage = 1, maxPage, curPage;
+    maxPage = md->maxPage();
+    curPage = md->currentPage();
+    curPage += 1;
+    ui->btFirst->setDisabled(curPage == 1);
+    ui->btPrev->setDisabled(curPage >= 1);
+    ui->btNext->setDisabled(curPage >= maxPage);
+    ui->btLast->setDisabled(curPage >= maxPage);
+    ui->spHalaman->setSuffix(QString("/%1").arg(maxPage));
+    ui->spHalaman->setValue(curPage);
+}
+
+void Exporter::on_kurvaOto_toggled(bool enabled)
+{
+    emit kurvaOtoChanged(ui->comboVersi->currentData(CLSIDRole).toString(), enabled);
 }
 
 int KalkulasiJumlahHalaman(const QString &s)

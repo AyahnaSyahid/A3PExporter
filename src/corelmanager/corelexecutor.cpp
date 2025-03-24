@@ -36,6 +36,10 @@ QAxObject* CorelExecutor::initialize() {
     return _ax;
 }
 
+void CorelExecutor::enableAutoCurve(const QString& CLSID, bool curve) {
+    setProperty(QString("%1-CLSID-TextAsCurves").arg(CLSID).toLatin1().constData(), curve);
+}
+
 void CorelExecutor::runDetect(const QString& CLSID) {
     auto com = initialize();
     emit beginDetect(CLSID);
@@ -113,6 +117,10 @@ void CorelExecutor::runExport(const QVariantMap& params) {
         }
         pdfs->setProperty(pst.key().toLatin1().constData(), pst.value());
     }
+    
+    // Apply Curve
+    QVariant ttc = property(QString("%1-CLSID-TextAsCurves").arg(CLSID).toLatin1().constData());
+    pdfs->setProperty("TextAsCurves", ttc.isValid() ? ttc.toBool() : true);
     
     QTemporaryFile tfile("ExporterTemp-XXXXXXXXXXXX.pdf");
     tfile.setAutoRemove(false);
