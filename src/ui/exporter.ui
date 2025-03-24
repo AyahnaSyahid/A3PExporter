@@ -354,10 +354,13 @@
           <item row="5" column="0" colspan="4">
            <widget class="QProgressBar" name="pBar">
             <property name="value">
-             <number>24</number>
+             <number>0</number>
             </property>
             <property name="alignment">
              <set>Qt::AlignCenter</set>
+            </property>
+            <property name="format">
+             <string/>
             </property>
            </widget>
           </item>
@@ -529,6 +532,12 @@
           <attribute name="horizontalHeaderDefaultSectionSize">
            <number>50</number>
           </attribute>
+          <attribute name="verticalHeaderMinimumSectionSize">
+           <number>20</number>
+          </attribute>
+          <attribute name="verticalHeaderDefaultSectionSize">
+           <number>20</number>
+          </attribute>
          </widget>
         </item>
         <item>
@@ -664,6 +673,17 @@
   <action name="actionToggleHistory">
    <property name="text">
     <string>Toggle History</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+H</string>
+   </property>
+  </action>
+  <action name="actionRefreshHistory">
+   <property name="text">
+    <string>Refresh History</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+R</string>
    </property>
   </action>
  </widget>

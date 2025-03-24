@@ -41,6 +41,7 @@ Exporter::Exporter(QWidget *parent)
     glb->setObjectName("settings");
     ui->comboVersi->clear();
     addAction(ui->actionToggleHistory);
+    addAction(ui->actionRefreshHistory);
     QSettings corelLookup("HKEY_CLASSES_ROOT", QSettings::NativeFormat);
     QString corelWithVersion = "CorelDRAW.Application.%1";
     
@@ -142,7 +143,7 @@ void Exporter::detectResultReady(const QVariantMap& res)
     } else {
         ui->leDoc->setText(res["fileName"].toString().isEmpty() ? res["vbaName"].toString() : res["fileName"].toString());
         if(!res["filePath"].toString().isEmpty()) {
-            ui->leKlien->setText(QDir(res["filePath"].toString()).dirName());
+            ui->leKlien->setText(QDir(res["filePath"].toString()).dirName().toUpper());
         }
         ui->lePage->setText(res["pageCount"].toInt() > 1 ? QString("1-%1").arg(res["pageCount"].toInt()) : "1");
         QString baseName = QFileInfo(res["vbaName"].toString()).baseName();
@@ -165,11 +166,13 @@ void Exporter::exportResultReady(const QVariantMap& res)
         QMessageBox::information(this, "Kesalahan", QString("Error :\n%1").arg(res["stateMessage"].toString()));
         return ;
     }
+    
     QFile exported(res["tempFile"].toString());
     if(!exported.exists()) {
         QMessageBox::critical(this, "Kesalahan", "File export tidak ditemukan");
         return;
     }
+    
     QDir exportPath(res["exportPath"].toString());
     if(exportPath.exists(res["exportName"].toString())) {
         // Pertimbangkan untuk membuat loop dialog sampai proses pemindahan dan atau penghapusan file temporer berhasil
@@ -199,15 +202,16 @@ void Exporter::exportResultReady(const QVariantMap& res)
                 QMessageBox::information(this, "Informasi", "Gagal menyimpan file export");
             return ;
         }
-    }    
+    }
     bool eok = exported.rename(exportPath.absoluteFilePath(res["exportName"].toString()));
+    QFileInfo fi(exported);
     if(!eok) {
         QMessageBox::information(this, "Informasi", "Gagal menyimpan file export");
     } else {
-        QFileInfo fi(exported);
         emit this->exported(fi.fileName());
-        // qDebug() << fi.fileName();
     }
+    
+    QMessageBox::information(this, "Export selesai", fi.fileName());
 }
 
 void Exporter::pdfSettingsChanged(const QVariantMap& m){
@@ -275,6 +279,7 @@ void Exporter::on_pbExport_clicked()
         QMessageBox::information(this, "Silahkan menunggu", QString("Perintah Export untuk %1 sebelumnya belum mendapat response").arg(progId));
         return;
     }
+    
     QString klien, fname, bhn, pr, qtys;
     auto lmsg = [=](QWidget *which, const QString msg) {
         QMessageBox::information(this, "Kesalahan Input", msg);
@@ -319,6 +324,7 @@ void Exporter::on_pbExport_clicked()
     ep["PageRange"] = ui->lePage->text();
     ep["exportPath"] = ui->leExpF->text();
     ep["exportName"] = vars.join("_") + ".pdf";
+
     waitState[QString("%1_export").arg(controlName)] = true;
     
     emit requestExport(ep);
@@ -326,8 +332,7 @@ void Exporter::on_pbExport_clicked()
 
 void Exporter::manageNavigasi()
 {
-    A3PDataModel* amd = findChild<A3PDataModel*>("A3PDataModel");
-    
+    // A3PDataModel* amd = findChild<A3PDataModel*>("A3PDataModel");
 }
 
 void Exporter::on_lePage_textChanged(const QString& txt)
@@ -395,6 +400,7 @@ void Exporter::on_histTable_customContextMenuRequested(const QPoint &pos)
                         QMessageBox::information(this, "Info", "Dibatalkan");
                 }
     );
+    tconMenu.addAction(ui->actionRefreshHistory);
     tconMenu.addAction(delRow);
     tconMenu.addAction(edt);
 
@@ -421,7 +427,8 @@ void Exporter::on_pbFilter_clicked()
 		else
 			flt = "";
 		mod->setFilter(flt);
-	}    // qDebug() << mod->filter();
+	}
+    ui->histTable->sortByColumn(0, Qt::AscendingOrder);
 }
 
 void Exporter::on_pbDetach_clicked()
@@ -445,24 +452,7 @@ void Exporter::on_pushButton_clicked()
 }
 
 void Exporter::on_comboVersi_currentIndexChanged(int index)
-{
-    // QString message;
-    // QSettings* glb = findChild<QSettings*>("settings");
-    // QString old = glb->value("CorelApplication/useVersion").toString(),
-            // _new = ui->comboVersi->itemText(index);
-            // message = "Pastikan anda telah menginstall Corel Versi %1 "
-                      // "Lanjutkan perubahan Corel atau tetap menggunakan Versi %2";
-    
-    // int result = QMessageBox::information(this, "Konfirmasi Corel yang digunakan",
-                                          // message.arg(_new, old), QMessageBox::Ok, QMessageBox::No);
-    // if(result == QMessageBox::No) {
-        // ui->comboVersi->setCurrentText(old);
-        // QMessageBox::information(this, "Info", "Dibatalkan");
-        // return;
-    // }
-    // glb->setValue("CorelApplication/useVersion", _new);
-    // glb->sync();
-}
+{}
 
 void Exporter::on_actionToggleHistory_triggered()
 {
@@ -470,6 +460,13 @@ void Exporter::on_actionToggleHistory_triggered()
     ui->histGroup->setHidden(!hidden);
     setMaximumWidth(hidden ? 578 : 251);
     adjustSize();
+}
+
+void Exporter::on_actionRefreshHistory_triggered()
+{
+    if(!ui->histGroup->isHidden()) {
+        ui->histTable->sortByColumn(0, Qt::AscendingOrder);
+    }
 }
 
 void Exporter::on_A3PDataModel_filterChanged()

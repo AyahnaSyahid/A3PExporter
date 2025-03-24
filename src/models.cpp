@@ -13,12 +13,8 @@ A3PDataModel::A3PDataModel(QObject *parent):QSqlTableModel(parent)
     m_maxRow = 200;
     displayMode = CurrentDay;
     ++m_instance_count;
+    setTable("a3pdata");
     connect(this, &A3PDataModel::currentPageChanged, this, &A3PDataModel::select);
-}
-
-void A3PDataModel::setTable(const QString &tableName_)
-{
-    QSqlTableModel::setTable(tableName_);
 }
 
 qlonglong A3PDataModel::tableRowCount() const
@@ -29,7 +25,6 @@ qlonglong A3PDataModel::tableRowCount() const
         query += fil;
     q.exec(query);
     qlonglong res = q.next() ? q.value(0).toLongLong() : 0;
-    // qDebug() << "rowCount" << res << q.lastQuery() << sender();
     return res;
 }
 
@@ -66,6 +61,10 @@ void A3PDataModel::setFilter(const QString &filter_)
     {
         QSqlTableModel::setFilter(filter_);
     }
+    if(m_currentPage > maxPage()) {
+        m_currentPage = maxPage();
+    }
+    
     emit filterChanged();
 }
 

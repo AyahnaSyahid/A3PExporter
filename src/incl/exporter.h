@@ -50,6 +50,7 @@ private slots:
     void on_comboVersi_currentIndexChanged(int);
     void on_leQty_textChanged(const QString&);
     void on_actionToggleHistory_triggered();
+    void on_actionRefreshHistory_triggered();
     void on_A3PDataModel_filterChanged();
     void on_kurvaOto_toggled(bool);
     void manageNavigasi();

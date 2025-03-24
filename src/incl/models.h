@@ -17,10 +17,9 @@ public:
     enum DisplayMode {CurrentDay, ShowAll};
     static int m_instance_count;
     A3PDataModel(QObject *parent = nullptr);
-    // QSqlTableModel interface
-    virtual void setTable(const QString &tableName) override;
     qlonglong tableRowCount() const;
     int currentPage() const;
+    int maxPage() const;
     const QString getSelectStatment() const;
     void setDisplayMode(DisplayMode disp);
     virtual void setFilter(const QString &filter  = QString()) override;
@@ -30,7 +29,6 @@ public slots:
     void prevPage();
     void lastPage();
     void firstPage();
-    int maxPage() const;
     void setMaxRow(int count);
     bool hasNextPage();
     bool hasPrevPage();
