@@ -105,9 +105,14 @@ void CorelExecutor::runExport(const QVariantMap& params) {
     }
     
     bags["PageRange"] = params["PageRange"];
-    // bags["UseColorProfile"] = true;
     
-    pdfs->setPropertyBag(bags);
+    QStringList excludeKeys {"UseColorProfile"};
+    for(auto pst = bags.cbegin(); pst != bags.cend(); pst++) {
+        if(excludeKeys.contains(pst.key())) {
+            continue;
+        }
+        pdfs->setProperty(pst.key().toLatin1().constData(), pst.value());
+    }
     
     QTemporaryFile tfile("ExporterTemp-XXXXXXXXXXXX.pdf");
     tfile.setAutoRemove(false);
