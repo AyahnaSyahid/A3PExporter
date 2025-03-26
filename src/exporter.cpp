@@ -37,6 +37,7 @@ Exporter::Exporter(QWidget *parent)
     A3PDataModel* model = new A3PDataModel(this);
     model->setObjectName("A3PDataModel");
     ui->setupUi(this);
+    ui->pBar->hide();
     QSettings* glb = new QSettings("conf.ini", QSettings::IniFormat, this);
     glb->setObjectName("settings");
     ui->comboVersi->clear();
@@ -93,8 +94,8 @@ Exporter::Exporter(QWidget *parent)
     ui->histTable->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(model, &QAbstractItemModel::rowsRemoved, model, &A3PDataModel::submit);
     connect(ui->cbxViewRange,&QComboBox::currentTextChanged, model, &A3PDataModel::toggleShowMode);
-    connect(model, &A3PDataModel::currentPageChanged, this, &Exporter::manageNavigasi);
-    connect(model, &A3PDataModel::filterChanged, this, &Exporter::manageNavigasi);
+    // connect(model, &A3PDataModel::currentPageChanged, this, &Exporter::manageNavigasi);
+    // connect(model, &A3PDataModel::filterChanged, this, &Exporter::manageNavigasi);
     connect(ui->btNext, &QToolButton::clicked, model, &A3PDataModel::nextPage);
     connect(ui->btPrev, &QToolButton::clicked, model, &A3PDataModel::prevPage);
     connect(ui->btLast, &QToolButton::clicked, model, &A3PDataModel::lastPage);
@@ -127,6 +128,7 @@ Exporter::~Exporter()
 void Exporter::detectResultReady(const QVariantMap& res)
 {
     waitState[QString("%1_detect").arg(res["controlName"].toString())] = false;
+    ui->tbDet->setEnabled(true);
     if(!res["state"].toBool()) {
         QMessageBox::information(this, "Kesalahan", QString("Error :\n%1").arg(res["stateMessage"].toString()));
         return ;
@@ -153,6 +155,7 @@ void Exporter::detectResultReady(const QVariantMap& res)
 
 void Exporter::pdfSettingsResult(const QVariantMap& res) {
     waitState[QString("%1_openSettings").arg(res["controlName"].toString())] = false;
+    ui->btPdfSetting->setEnabled(true);
     if(!res["state"].toBool()) {
         QMessageBox::information(this, "Kesalahan", QString("Error :\n%1").arg(res["stateMessage"].toString()));
         return ;
@@ -162,14 +165,18 @@ void Exporter::pdfSettingsResult(const QVariantMap& res) {
 void Exporter::exportResultReady(const QVariantMap& res)
 {
     waitState[QString("%1_export").arg(res["controlName"].toString())] = false;
+    QLabel* statusLabel = findChild<QLabel*>("statusLabel");
+    ui->pbExport->setEnabled(true);
     if(!res["state"].toBool()) {
         QMessageBox::information(this, "Kesalahan", QString("Error :\n%1").arg(res["stateMessage"].toString()));
+        ui->pBar->hide();
         return ;
     }
     
     QFile exported(res["tempFile"].toString());
     if(!exported.exists()) {
         QMessageBox::critical(this, "Kesalahan", "File export tidak ditemukan");
+        ui->pBar->hide();
         return;
     }
     
@@ -181,10 +188,12 @@ void Exporter::exportResultReady(const QVariantMap& res)
         if(saveAs.isEmpty()) {
             if(exported.remove()) {
                 QMessageBox::information(this, "Informasi", "Export dibatalkan");
+                ui->pBar->hide();
                 return ;
             } else {
                 QMessageBox::information(this, "Informasi", "Gagal menghapus berkas sementara, anda harus menghapusnya secara manual");
                 QProcess::startDetached("C:\\Windows\\explorer.exe", QStringList() << QFileInfo(res["tempFile"].toString()).absolutePath());
+                ui->pBar->hide();
                 return;
             }
         } else {
@@ -194,24 +203,29 @@ void Exporter::exportResultReady(const QVariantMap& res)
                 bool rmsuc = saf.remove();
                 if(!rmsuc) {
                     QMessageBox::information(this, "Informasi", "Gagal menghapus berkas target");
+                    ui->pBar->hide();
                     return;
                 }
             }
             bool eok = exported.rename(saveAs);
             if(!eok)
                 QMessageBox::information(this, "Informasi", "Gagal menyimpan file export");
+            ui->pBar->hide();
             return ;
         }
     }
+    statusLabel->setText("Memindahkan file...");
     bool eok = exported.rename(exportPath.absoluteFilePath(res["exportName"].toString()));
     QFileInfo fi(exported);
     if(!eok) {
         QMessageBox::information(this, "Informasi", "Gagal menyimpan file export");
     } else {
+        statusLabel->setText("Selesai...");
         emit this->exported(fi.fileName());
+        QTimer::singleShot(0, qobject_cast<A3PDataModel*>(ui->histTable->model()), &A3PDataModel::select);
     }
-    
     QMessageBox::information(this, "Export selesai", fi.fileName());
+    ui->pBar->hide();
 }
 
 void Exporter::pdfSettingsChanged(const QVariantMap& m){
@@ -223,6 +237,7 @@ void Exporter::pdfSettingsChanged(const QVariantMap& m){
         glb->setValue("PDFSettings", m);
         glb->sync();
     }
+    ui->btPdfSetting->setDisabled(false);
 }
 
 QString Exporter::currentExportFolder() const
@@ -240,6 +255,7 @@ void Exporter::on_tbDet_clicked()
         return;
     }
     waitState[QString("%1_detect").arg(controlName)] = true;
+    ui->tbDet->setEnabled(false);
     emit requestDetect(controlName);
 }
 
@@ -253,6 +269,7 @@ void Exporter::on_btPdfSetting_clicked()
         return;
     }
     waitState[QString("%1_openSettings").arg(controlName)] = true;
+    ui->btPdfSetting->setDisabled(true);
     emit requestOpenSettings(controlName);
 }
 
@@ -277,6 +294,7 @@ void Exporter::on_pbExport_clicked()
     progId = ui->comboVersi->currentData(ProgIDRole).toString();
     if(waitState.value(QString("%1_export").arg(controlName), false).toBool()) {
         QMessageBox::information(this, "Silahkan menunggu", QString("Perintah Export untuk %1 sebelumnya belum mendapat response").arg(progId));
+        ui->pbExport->setEnabled(false);
         return;
     }
     
@@ -326,13 +344,22 @@ void Exporter::on_pbExport_clicked()
     ep["exportName"] = vars.join("_") + ".pdf";
 
     waitState[QString("%1_export").arg(controlName)] = true;
+    ui->pbExport->setDisabled(true);
     
+    ui->pBar->setMinimum(0);
+    ui->pBar->setMaximum(0);
+    ui->pBar->show();
+    
+    QLabel* statusLabel = findChild<QLabel*>("statusLabel");
+    if(!statusLabel) {
+        statusLabel = new QLabel(ui->pBar);
+        statusLabel->setAlignment(Qt::AlignCenter);
+        statusLabel->setObjectName("statusLabel");
+        statusLabel->setGeometry(ui->pBar->rect());
+        statusLabel->show();
+    }
+    statusLabel->setText("Mengeksport...");
     emit requestExport(ep);
-}
-
-void Exporter::manageNavigasi()
-{
-    // A3PDataModel* amd = findChild<A3PDataModel*>("A3PDataModel");
 }
 
 void Exporter::on_lePage_textChanged(const QString& txt)
@@ -348,16 +375,16 @@ void Exporter::on_lePage_textChanged(const QString& txt)
             if(lastCopy > 1)
                 ui->leQty->setText(QString("%1@%2").arg(kalk).arg(lastCopy));
             else 
-                ui->leQty->setText(QString("%1").arg(kalk));
+                ui->leQty->setText(QString("%1").arg(lastCopy));
         } else {
             if(lastCopy > 1)
                 ui->leQty->setText(QString("%1@%2").arg(kalk).arg(lastCopy));
             else 
-                ui->leQty->setText(QString("%1").arg(kalk));
+                ui->leQty->setText(QString("%1").arg(lastCopy));
         }
         return ;
     }
-    ui->leQty->setText(QString::number(kalk));
+    ui->leQty->setText(QString::number(lastCopy));
 }
 
 void Exporter::on_leQty_textChanged(const QString& txt) {

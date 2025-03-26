@@ -53,7 +53,7 @@ private slots:
     void on_actionRefreshHistory_triggered();
     void on_A3PDataModel_filterChanged();
     void on_kurvaOto_toggled(bool);
-    void manageNavigasi();
+    // void manageNavigasi();
 
 signals:
     void requestDetect(const QString& clsid);
