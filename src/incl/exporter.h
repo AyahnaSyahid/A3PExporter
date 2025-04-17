@@ -54,6 +54,7 @@ private slots:
     void on_actionRefreshHistory_triggered();
     void on_A3PDataModel_filterChanged();
     void on_kurvaOto_toggled(bool);
+    void on_actionCloseDocument_triggered();
     // void manageNavigasi();
 
 signals:

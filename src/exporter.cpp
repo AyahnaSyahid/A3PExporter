@@ -44,6 +44,7 @@ Exporter::Exporter(QWidget *parent)
     ui->comboVersi->clear();
     addAction(ui->actionToggleHistory);
     addAction(ui->actionRefreshHistory);
+    addAction(ui->actionCloseDocument);
     QSettings corelLookup("HKEY_CLASSES_ROOT", QSettings::NativeFormat);
     QString corelWithVersion = "CorelDRAW.Application.%1";
     
@@ -107,7 +108,6 @@ Exporter::Exporter(QWidget *parent)
     ui->sideCheck->setChecked(false);
     
     
-    
     auto bahanCompleter = new QCompleter(this);
     auto bahanModel = new QSqlQueryModel(this);
     bahanCompleter->setObjectName("bahanCompleter");
@@ -161,6 +161,12 @@ Exporter::~Exporter()
     QSettings* glb = findChild<QSettings*>("settings");
     glb->sync();
     delete ui;
+}
+
+void Exporter::on_actionCloseDocument_triggered()
+{
+    auto CLSID = ui->comboVersi->currentData(CLSIDRole).toString();
+    emit requestClose(CLSID);
 }
 
 void Exporter::detectResultReady(const QVariantMap& res)

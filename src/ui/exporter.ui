@@ -693,6 +693,17 @@
     <string>Ctrl+R</string>
    </property>
   </action>
+  <action name="actionCloseDocument">
+   <property name="text">
+    <string>Close ActiveDocument</string>
+   </property>
+   <property name="toolTip">
+    <string>Close Current ActiveDocument</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
+   </property>
+  </action>
  </widget>
  <tabstops>
   <tabstop>tbDet</tabstop>
