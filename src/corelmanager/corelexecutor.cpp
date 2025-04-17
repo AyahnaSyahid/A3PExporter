@@ -29,6 +29,7 @@ void CorelExecutor::init() {
 
 QAxObject* CorelExecutor::initialize() {
     if(_ax) {
+        _ax->clear();
         return _ax;
     }
     CoInitializeEx(0, COINIT_MULTITHREADED);
@@ -109,6 +110,7 @@ void CorelExecutor::runExport(const QVariantMap& params) {
     }
     
     bags["PageRange"] = params["PageRange"];
+    bags["PublishRange"] = 3;
     
     QStringList excludeKeys {"UseColorProfile"};
     for(auto pst = bags.cbegin(); pst != bags.cend(); pst++) {
@@ -165,5 +167,22 @@ void CorelExecutor::openSettings(const QString& CLSID) {
         emit pdfSettingsChanged(pset->propertyBag());
     } else {
         PDFSettingsBag = pset->propertyBag();
+    }
+}
+
+void CorelExecutor::closeActiveDocument(const QString& clsid)
+{
+    auto com = initialize();
+    com->setControl(clsid);
+    if(com->isNull()) return;
+    auto doc = com->querySubObject("ActiveDocument");
+    if(doc) {
+        auto docs = com->querySubObject("Documents");
+        int docCount = docs->property("Count").toInt();
+        if(docCount > 0) {
+            doc->dynamicCall("Close()");
+        }
+        if(docCount != docs->property("Count").toInt())
+            emit activeDocumentClosed(clsid);
     }
 }

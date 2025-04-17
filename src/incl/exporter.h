@@ -33,6 +33,7 @@ public:
 public slots:
     void detectResultReady(const QVariantMap& vmap);
     void exportResultReady(const QVariantMap& vmap);
+    void documentClosedHandler();
     void pdfSettingsResult(const QVariantMap&);
     void pdfSettingsChanged(const QVariantMap&);
     
@@ -61,6 +62,7 @@ signals:
     void exported(const QString& fullPath);
 	void requestOpenSettings(const QString& clsid);
     void kurvaOtoChanged(const QString& CLSID, bool);
+    void requestClose(const QString& clsid);
 
 private:
     Ui::Exporter *ui;

@@ -10,6 +10,7 @@
 #include <QRegularExpression>
 #include <QAbstractItemModel>
 #include <QRegularExpressionValidator>
+#include <QStringListModel>
 #include <QFileSystemModel>
 #include <QFileDialog>
 #include <QFile>
@@ -57,7 +58,9 @@ Exporter::Exporter(QWidget *parent)
             ui->comboVersi->setItemData(lastIndex, CLSID, CLSIDRole);
         }
     }
-    
+    if(ui->comboVersi->count() > 1) {
+        ui->comboVersi->setCurrentIndex(ui->comboVersi->count() - 1);
+    }
     ui->leExpF->setText(glb->value("Exporter/lastExportFolder").toString());
 
     QRegularExpression reQty("^[1-9]\\d*(@[1-9]\\d*)?");
@@ -94,8 +97,7 @@ Exporter::Exporter(QWidget *parent)
     ui->histTable->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(model, &QAbstractItemModel::rowsRemoved, model, &A3PDataModel::submit);
     connect(ui->cbxViewRange,&QComboBox::currentTextChanged, model, &A3PDataModel::toggleShowMode);
-    // connect(model, &A3PDataModel::currentPageChanged, this, &Exporter::manageNavigasi);
-    // connect(model, &A3PDataModel::filterChanged, this, &Exporter::manageNavigasi);
+
     connect(ui->btNext, &QToolButton::clicked, model, &A3PDataModel::nextPage);
     connect(ui->btPrev, &QToolButton::clicked, model, &A3PDataModel::prevPage);
     connect(ui->btLast, &QToolButton::clicked, model, &A3PDataModel::lastPage);
@@ -103,6 +105,37 @@ Exporter::Exporter(QWidget *parent)
     
     ui->sideCheck->setEnabled(false);
     ui->sideCheck->setChecked(false);
+    
+    
+    
+    auto bahanCompleter = new QCompleter(this);
+    auto bahanModel = new QSqlQueryModel(this);
+    bahanCompleter->setObjectName("bahanCompleter");
+    bahanCompleter->setCaseSensitivity(Qt::CaseInsensitive);
+    bahanModel->setObjectName("bahanModel");
+    bahanModel->setQuery("SELECT bahan, SUM(jkopi) as [count] FROM a3pdata GROUP BY bahan ORDER BY [count] DESC");
+    bahanCompleter->setModel(bahanModel);
+    bahanCompleter->setCompletionMode(QCompleter::PopupCompletion);
+    ui->leBahan->setCompleter(bahanCompleter);
+    
+    // auto editorCompleter = new QCompleter(this);
+    auto editorModel = new QStringListModel(QStringList {"A3P", "BRY", "GAL", "PLH"}, this);
+    // editorCompleter->setObjectName("editorCompleter");
+    // editorCompleter->setCaseSensitivity(Qt::CaseInsensitive);
+    // editorCompleter->setModel(editorModel);
+    // editorCompleter->setCompletionMode(QCompleter::PopupCompletion);
+    editorModel->setObjectName("editorModel");
+    ui->comboBox->setModel(editorModel);
+    
+    auto klienCompleter = new QCompleter(this);
+    klienCompleter->setObjectName("klienCompleter");
+    klienCompleter->setCompletionMode(QCompleter::PopupCompletion);
+    klienCompleter->setCaseSensitivity(Qt::CaseInsensitive);
+    auto klienModel = new QSqlQueryModel(this);
+    klienModel->setObjectName("klienModel");
+    klienModel->setQuery("SELECT DISTINCT klien FROM a3pdata");
+    klienCompleter->setModel(klienModel);
+    ui->leKlien->setCompleter(klienCompleter);
     
     cx->moveToThread(executorThread);
     
@@ -115,7 +148,12 @@ Exporter::Exporter(QWidget *parent)
     connect(this, &Exporter::requestExport, cx, &CorelExecutor::runExport);
     connect(cx, &CorelExecutor::exportResult, this, &Exporter::exportResultReady);
     connect(this, &Exporter::kurvaOtoChanged, cx, &CorelExecutor::enableAutoCurve);
+    connect(this, &Exporter::requestClose, cx, &CorelExecutor::closeActiveDocument);
+    connect(cx, &CorelExecutor::activeDocumentClosed, this, &Exporter::documentClosedHandler);
     executorThread->start();
+    
+    connect(this, &Exporter::exported, bahanModel, [bahanModel](){ bahanModel->setQuery(bahanModel->query().lastQuery()); });
+    connect(this, &Exporter::exported, klienModel, [klienModel](){ klienModel->setQuery(klienModel->query().lastQuery()); });
 }
 
 Exporter::~Exporter()
@@ -240,6 +278,12 @@ void Exporter::pdfSettingsChanged(const QVariantMap& m){
     ui->btPdfSetting->setDisabled(false);
 }
 
+void Exporter::documentClosedHandler()
+{
+    if(ui->tbDet->isEnabled())
+        ui->tbDet->click();
+}
+
 QString Exporter::currentExportFolder() const
 {
     return ui->leExpF->text();
@@ -284,7 +328,13 @@ void Exporter::on_tbBrowse_clicked()
 }
 
 void Exporter::on_sideCheck_toggled(bool t) {
-    emit ui->lePage->textChanged(ui->lePage->text());
+    int kalk = KalkulasiJumlahHalaman(ui->lePage->text());
+    auto page = t ? kalk / 2 : kalk;
+    if(page <= 1) {
+        ui->leQty->setText(QString::number(page));
+    } else {
+        ui->leQty->setText(QString("%1@1").arg(page));
+    }
 }
 
 void Exporter::on_pbExport_clicked()
@@ -330,7 +380,7 @@ void Exporter::on_pbExport_clicked()
         return;
     }
     qtys = ui->leQty->text();
-    if(ui->sideCheck->isChecked()) {
+    if(ui->sideCheck->isEnabled() && ui->sideCheck->isChecked()) {
         qtys += "_BB";
     }
     if(!ui->txKet->toPlainText().isEmpty()) {
@@ -365,29 +415,33 @@ void Exporter::on_pbExport_clicked()
 void Exporter::on_lePage_textChanged(const QString& txt)
 {
     int kalk = KalkulasiJumlahHalaman(txt);
-    int second, lastCopy;
-    second = parseQty(ui->leQty->text()).second;
-    lastCopy = (second == 0) ? 1 : second;
-    if(kalk > 0)
-    { 
-        if(!(kalk % 2)) {
-            ui->sideCheck->setEnabled(true);
-            if(lastCopy > 1)
-                ui->leQty->setText(QString("%1@%2").arg(kalk).arg(lastCopy));
-            else 
-                ui->leQty->setText(QString("%1").arg(lastCopy));
-        } else {
-            if(lastCopy > 1)
-                ui->leQty->setText(QString("%1@%2").arg(kalk).arg(lastCopy));
-            else 
-                ui->leQty->setText(QString("%1").arg(lastCopy));
-        }
+    auto lastCopy = parseQty(ui->leQty->text()).second;
+
+    ui->sideCheck->blockSignals(true);
+    ui->sideCheck->setEnabled(kalk % 2 == 0);
+    ui->sideCheck->blockSignals(false);
+    
+    if(kalk < 1)
+    {
+        ui->leQty->clear();
         return ;
     }
-    ui->leQty->setText(QString::number(lastCopy));
+    
+    int page = kalk;
+    if(ui->sideCheck->isChecked()) {
+        page = page / 2;
+    }
+    if(page > 1) {
+        ui->leQty->setText(QString("%1@%2").arg(page).arg(lastCopy));
+        return ;
+    } else {
+        ui->leQty->setText(QString("%1").arg(lastCopy));
+        return ;
+    }
 }
 
 void Exporter::on_leQty_textChanged(const QString& txt) {
+    // just update tooltip
     auto kl = parseQty(txt);
     if (kl != QPair<int, int>{0, 0}) {
         QString tbl(R"(<style>table { border-spacing: 10px; } td { padding: 2px; }</style>
@@ -543,5 +597,5 @@ QPair<int, int> parseQty(const QString& txt) {
         copy = splitted[1].toInt();
         return {page, copy};
     }
-    return {0, 0};
+    return {1, 1};
 }

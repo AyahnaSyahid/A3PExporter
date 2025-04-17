@@ -19,6 +19,7 @@ public slots:
     void runExport(const QVariantMap& params);
     void runDetect(const QString& clsid);
     void openSettings(const QString& clsid);
+    void closeActiveDocument(const QString& CLSID);
 
 signals:
     void beginDetect(const QString& CLSID);
@@ -31,6 +32,7 @@ signals:
     void pdfSettingsClosed(const QString& s);
     void pdfSettingsChanged(const QVariantMap&);
     void pdfSettingsResult(const QVariantMap&);
+    void activeDocumentClosed(const QString& CLSID);
 
 private:
     QAxObject* initialize();
