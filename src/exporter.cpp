@@ -118,12 +118,7 @@ Exporter::Exporter(QWidget *parent)
     bahanCompleter->setCompletionMode(QCompleter::PopupCompletion);
     ui->leBahan->setCompleter(bahanCompleter);
     
-    // auto editorCompleter = new QCompleter(this);
     auto editorModel = new QStringListModel(QStringList {"A3P", "BRY", "GAL", "PLH"}, this);
-    // editorCompleter->setObjectName("editorCompleter");
-    // editorCompleter->setCaseSensitivity(Qt::CaseInsensitive);
-    // editorCompleter->setModel(editorModel);
-    // editorCompleter->setCompletionMode(QCompleter::PopupCompletion);
     editorModel->setObjectName("editorModel");
     ui->comboBox->setModel(editorModel);
     
@@ -150,6 +145,7 @@ Exporter::Exporter(QWidget *parent)
     connect(this, &Exporter::kurvaOtoChanged, cx, &CorelExecutor::enableAutoCurve);
     connect(this, &Exporter::requestClose, cx, &CorelExecutor::closeActiveDocument);
     connect(cx, &CorelExecutor::activeDocumentClosed, this, &Exporter::documentClosedHandler);
+    connect(cx, &CorelExecutor::moveFailed, this, &Exporter::onMoverFailed);
     executorThread->start();
     
     connect(this, &Exporter::exported, bahanModel, [bahanModel](){ bahanModel->setQuery(bahanModel->query().lastQuery()); });
@@ -203,6 +199,35 @@ void Exporter::pdfSettingsResult(const QVariantMap& res) {
     if(!res["state"].toBool()) {
         QMessageBox::information(this, "Kesalahan", QString("Error :\n%1").arg(res["stateMessage"].toString()));
         return ;
+    }
+}
+
+void Exporter::onMoverFailed(const QString tpln, const QString& drn, const QString& fn)
+{
+    QFile tf(tpln);
+    if(!tf.exists())
+    {
+        QMessageBox::information(this, "Kesalahan", "Temporary file tidak ditemukan\n" + tf.fileName());
+        return;
+    }
+    
+    QFileInfo td(drn, fn);
+    if(td.exists())
+    {
+        // Rename or Delete
+        QMessageBox::information(this, "Ditemukan duplikasi nama file", "diperlukan alamat baru untuk menyimpan file");
+        auto saveAs = QFileDialog::getSaveFileName(this, "Simpan sebagai", td.dir().canonicalPath(), ("PDF File (*.pdf)"), tf.fileName());
+        if(!saveAs.isEmpty())
+        {
+            if(QFileInfo::exists(saveAs))
+            {
+                if(! QFile(saveAs).remove()) {
+                    QMessageBox::information(this, "Error", "Tidak dapat menghapus file :\n" + saveAs)
+                    tf.remove();
+                    return;
+                }
+            }
+        }
     }
 }
 

@@ -55,7 +55,7 @@ private slots:
     void on_A3PDataModel_filterChanged();
     void on_kurvaOto_toggled(bool);
     void on_actionCloseDocument_triggered();
-    // void manageNavigasi();
+    void onMoverFailed(const QString& tplf, const QString& tdir, consr QString& fn);
 
 signals:
     void requestDetect(const QString& clsid);

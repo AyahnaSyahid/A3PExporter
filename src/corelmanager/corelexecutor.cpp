@@ -90,6 +90,7 @@ void CorelExecutor::runExport(const QVariantMap& params) {
         emit endExport(CLSID);
         return;
     }
+
     int docCount = com->querySubObject("Documents")->property("Count").toInt();
     if(docCount < 1) {
         res["state"] = false;
@@ -101,6 +102,7 @@ void CorelExecutor::runExport(const QVariantMap& params) {
     auto act = com->querySubObject("ActiveDocument");
     auto pdfs = act->querySubObject("PDFSettings");
     auto bags =  PDFSettingsBag;
+
     if(bags.count() < 1) {
         QSettings* glb = sender()->findChild<QSettings*>("settings");
         auto eset = glb->value("PDFSettings");
@@ -108,10 +110,10 @@ void CorelExecutor::runExport(const QVariantMap& params) {
             bags = eset.toMap();
         }
     }
-    
-    bags["PageRange"] = params["PageRange"];
+
     bags["PublishRange"] = 3;
-    
+    bags["PageRange"] = params["PageRange"];
+
     QStringList excludeKeys {"UseColorProfile"};
     for(auto pst = bags.cbegin(); pst != bags.cend(); pst++) {
         if(excludeKeys.contains(pst.key())) {
@@ -123,18 +125,36 @@ void CorelExecutor::runExport(const QVariantMap& params) {
     // Apply Curve
     QVariant ttc = property(QString("%1-CLSID-TextAsCurves").arg(CLSID).toLatin1().constData());
     pdfs->setProperty("TextAsCurves", ttc.isValid() ? ttc.toBool() : true);
-    
+
     QTemporaryFile tfile("ExporterTemp-XXXXXXXXXXXX.pdf");
     tfile.setAutoRemove(false);
     tfile.open();
+    
     res.insert("tempFile", tfile.fileName());
     tfile.close();
+    
     act->dynamicCall("PublishToPdf(const QString&)", tfile.fileName());
+    
     res["exportPath"] = params["exportPath"];
     res["exportName"] = params["exportName"];
     
     PDFSettingsBag.clear();
+
     emit exportResult(res);
+
+    QDir tdir(params["exportPath"]);
+    if(tdir.exists(params["exportName"])
+    {
+        emit moveFailed(tfile.fileName(), params["exportPath"].toString(), params["exportName"].toString());
+    }
+    
+    QFile exported(tfile.fileName());
+    bool moveProcess = exported.rename(tdir.absoluteFilePath(param["exportName"].toString()));
+    if(! moveProcess)
+    {
+        emit moveFailed(tfile.fileName(), params["exportPath"].toString(), params["exportName"].toString());
+    }
+    
 }
 
 void CorelExecutor::openSettings(const QString& CLSID) {

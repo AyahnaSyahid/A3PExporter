@@ -33,6 +33,7 @@ signals:
     void pdfSettingsChanged(const QVariantMap&);
     void pdfSettingsResult(const QVariantMap&);
     void activeDocumentClosed(const QString& CLSID);
+    void moveFailed(const QString&, const QString&, const QString&);
 
 private:
     QAxObject* initialize();
