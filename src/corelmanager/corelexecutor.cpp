@@ -137,24 +137,8 @@ void CorelExecutor::runExport(const QVariantMap& params) {
     
     res["exportPath"] = params["exportPath"];
     res["exportName"] = params["exportName"];
-    
     PDFSettingsBag.clear();
-
     emit exportResult(res);
-
-    QDir tdir(params["exportPath"]);
-    if(tdir.exists(params["exportName"])
-    {
-        emit moveFailed(tfile.fileName(), params["exportPath"].toString(), params["exportName"].toString());
-    }
-    
-    QFile exported(tfile.fileName());
-    bool moveProcess = exported.rename(tdir.absoluteFilePath(param["exportName"].toString()));
-    if(! moveProcess)
-    {
-        emit moveFailed(tfile.fileName(), params["exportPath"].toString(), params["exportName"].toString());
-    }
-    
 }
 
 void CorelExecutor::openSettings(const QString& CLSID) {

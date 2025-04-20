@@ -145,7 +145,8 @@ Exporter::Exporter(QWidget *parent)
     connect(this, &Exporter::kurvaOtoChanged, cx, &CorelExecutor::enableAutoCurve);
     connect(this, &Exporter::requestClose, cx, &CorelExecutor::closeActiveDocument);
     connect(cx, &CorelExecutor::activeDocumentClosed, this, &Exporter::documentClosedHandler);
-    connect(cx, &CorelExecutor::moveFailed, this, &Exporter::onMoverFailed);
+    // connect(cx, &CorelExecutor::moveFailed, this, &Exporter::onMoverFailed);
+    connect(this, &Exporter::readyToMove, this, &Exporter::moveExportedFile);
     executorThread->start();
     
     connect(this, &Exporter::exported, bahanModel, [bahanModel](){ bahanModel->setQuery(bahanModel->query().lastQuery()); });
@@ -202,54 +203,11 @@ void Exporter::pdfSettingsResult(const QVariantMap& res) {
     }
 }
 
-void Exporter::onMoverFailed(const QString tpln, const QString& drn, const QString& fn)
+void Exporter::moveExportedFile(const QVariantMap& res)
 {
-    QFile tf(tpln);
-    if(!tf.exists())
-    {
-        QMessageBox::information(this, "Kesalahan", "Temporary file tidak ditemukan\n" + tf.fileName());
-        return;
-    }
-    
-    QFileInfo td(drn, fn);
-    if(td.exists())
-    {
-        // Rename or Delete
-        QMessageBox::information(this, "Ditemukan duplikasi nama file", "diperlukan alamat baru untuk menyimpan file");
-        auto saveAs = QFileDialog::getSaveFileName(this, "Simpan sebagai", td.dir().canonicalPath(), ("PDF File (*.pdf)"), tf.fileName());
-        if(!saveAs.isEmpty())
-        {
-            if(QFileInfo::exists(saveAs))
-            {
-                if(! QFile(saveAs).remove()) {
-                    QMessageBox::information(this, "Error", "Tidak dapat menghapus file :\n" + saveAs)
-                    tf.remove();
-                    return;
-                }
-            }
-        }
-    }
-}
-
-void Exporter::exportResultReady(const QVariantMap& res)
-{
-    waitState[QString("%1_export").arg(res["controlName"].toString())] = false;
-    QLabel* statusLabel = findChild<QLabel*>("statusLabel");
-    ui->pbExport->setEnabled(true);
-    if(!res["state"].toBool()) {
-        QMessageBox::information(this, "Kesalahan", QString("Error :\n%1").arg(res["stateMessage"].toString()));
-        ui->pBar->hide();
-        return ;
-    }
-    
-    QFile exported(res["tempFile"].toString());
-    if(!exported.exists()) {
-        QMessageBox::critical(this, "Kesalahan", "File export tidak ditemukan");
-        ui->pBar->hide();
-        return;
-    }
-    
     QDir exportPath(res["exportPath"].toString());
+    QFile exported(res["tempFile"].toString());
+    QLabel* statusLabel = findChild<QLabel*>("statusLabel");
     if(exportPath.exists(res["exportName"].toString())) {
         // Pertimbangkan untuk membuat loop dialog sampai proses pemindahan dan atau penghapusan file temporer berhasil
         QMessageBox::critical(this, "Duplikasi file ditemukan", "Anda dapat membatalkan atau menyimpan dengan nama file berbeda pada dialog selanjutnya");
@@ -283,6 +241,7 @@ void Exporter::exportResultReady(const QVariantMap& res)
             return ;
         }
     }
+    
     statusLabel->setText("Memindahkan file...");
     bool eok = exported.rename(exportPath.absoluteFilePath(res["exportName"].toString()));
     QFileInfo fi(exported);
@@ -295,6 +254,27 @@ void Exporter::exportResultReady(const QVariantMap& res)
     }
     QMessageBox::information(this, "Export selesai", fi.fileName());
     ui->pBar->hide();
+}
+
+void Exporter::exportResultReady(const QVariantMap& res)
+{
+    waitState[QString("%1_export").arg(res["controlName"].toString())] = false;
+    QLabel* statusLabel = findChild<QLabel*>("statusLabel");
+    ui->pbExport->setEnabled(true);
+    if(!res["state"].toBool()) {
+        QMessageBox::information(this, "Kesalahan", QString("Error :\n%1").arg(res["stateMessage"].toString()));
+        ui->pBar->hide();
+        return ;
+    }
+    
+    QFile exported(res["tempFile"].toString());
+    if(!exported.exists()) {
+        QMessageBox::critical(this, "Kesalahan", "File export tidak ditemukan");
+        ui->pBar->hide();
+        return;
+    }
+    
+    emit readyToMove(res);
 }
 
 void Exporter::pdfSettingsChanged(const QVariantMap& m){
