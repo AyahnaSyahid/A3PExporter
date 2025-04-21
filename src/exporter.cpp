@@ -252,7 +252,7 @@ void Exporter::moveExportedFile(const QVariantMap& res)
         emit this->exported(fi.fileName());
         QTimer::singleShot(0, qobject_cast<A3PDataModel*>(ui->histTable->model()), &A3PDataModel::select);
     }
-    QMessageBox::information(this, "Export selesai", fi.fileName());
+    QMessageBox::information(nullptr, "Export selesai", fi.fileName());
     ui->pBar->hide();
 }
 
