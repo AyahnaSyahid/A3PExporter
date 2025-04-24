@@ -5,6 +5,7 @@
 #include "incl/a3database.h"
 #include "corelmanager/incl/corelexecutor.h"
 #include "incl/models.h"
+#include "incl/filemover.h"
 
 #include <QCompleter>
 #include <QRegularExpression>
@@ -160,6 +161,11 @@ Exporter::~Exporter()
     delete ui;
 }
 
+void Exporter::on_leExpF_textChanged(const QString& tx) {
+    QSettings* glb = findChild<QSettings*>("settings");
+    glb->setValue("Exporter/lastExportFolder", tx);
+}
+
 void Exporter::on_actionCloseDocument_triggered()
 {
     auto CLSID = ui->comboVersi->currentData(CLSIDRole).toString();
@@ -208,6 +214,7 @@ void Exporter::moveExportedFile(const QVariantMap& res)
     QDir exportPath(res["exportPath"].toString());
     QFile exported(res["tempFile"].toString());
     QLabel* statusLabel = findChild<QLabel*>("statusLabel");
+  
     if(exportPath.exists(res["exportName"].toString())) {
         // Pertimbangkan untuk membuat loop dialog sampai proses pemindahan dan atau penghapusan file temporer berhasil
         QMessageBox::critical(this, "Duplikasi file ditemukan", "Anda dapat membatalkan atau menyimpan dengan nama file berbeda pada dialog selanjutnya");
@@ -243,7 +250,9 @@ void Exporter::moveExportedFile(const QVariantMap& res)
     }
     
     statusLabel->setText("Memindahkan file...");
+    
     bool eok = exported.rename(exportPath.absoluteFilePath(res["exportName"].toString()));
+    
     QFileInfo fi(exported);
     if(!eok) {
         QMessageBox::information(this, "Informasi", "Gagal menyimpan file export");
@@ -252,12 +261,21 @@ void Exporter::moveExportedFile(const QVariantMap& res)
         emit this->exported(fi.fileName());
         QTimer::singleShot(0, qobject_cast<A3PDataModel*>(ui->histTable->model()), &A3PDataModel::select);
     }
-    QMessageBox::information(nullptr, "Export selesai", fi.fileName());
+    QMessageBox* mb = new QMessageBox(QMessageBox::Information, "Export selesai", fi.fileName(), QMessageBox::NoButton);
+    mb->setAttribute(Qt::WA_DeleteOnClose);
+    mb->setWindowFlag(Qt::FramelessWindowHint, true);
+    QTimer::singleShot(2000, mb, &QDialog::accept);
+    mb->open();
     ui->pBar->hide();
+}
+
+void Exporter::handleFailedMove(const QVariantMap& par) {
+    QMessageBox::information(this, "Gagal memindahkan File", QString("Temp : %1\nKe : %2").arg(par["tempFile"].toString()).arg(par["target"].toString()));
 }
 
 void Exporter::exportResultReady(const QVariantMap& res)
 {
+
     waitState[QString("%1_export").arg(res["controlName"].toString())] = false;
     QLabel* statusLabel = findChild<QLabel*>("statusLabel");
     ui->pbExport->setEnabled(true);
@@ -274,7 +292,33 @@ void Exporter::exportResultReady(const QVariantMap& res)
         return;
     }
     
-    emit readyToMove(res);
+    QDir exportPath(res["exportPath"].toString());
+    QString exportName = exportPath.absoluteFilePath(res["exportName"].toString());
+    if( exportPath.exists(res["exportName"].toString()) ) {
+        // get new name
+        QString newName = QFileDialog::getSaveFileName(this, "Simpan dengan Nama", exportPath.absoluteFilePath(res["exportName"].toString()), "PDF (*.pdf)");
+        if( newName.isEmpty() ) {
+            QFile(res["tempFile"].toString()).remove();
+            QMessageBox::information(this, "Informasi", "Export dibatalkan");
+            return ;
+        }
+        if(QFileInfo::exists(newName)) {
+            QFile q(newName);
+            q.remove();
+        }
+        exportName = newName;
+    }
+    
+    QVariantMap vmap;
+    vmap.insert("tempFile", res["tempFile"]);
+    vmap.insert("target", exportName);
+    
+    FileMover* fmov = new FileMover(vmap);
+    connect(fmov, &FileMover::failed, this, &Exporter::handleFailedMove);
+    connect(fmov, &QThread::finished, fmov, &QThread::deleteLater);
+    fmov->start();
+    
+    ui->pBar->hide();
 }
 
 void Exporter::pdfSettingsChanged(const QVariantMap& m){

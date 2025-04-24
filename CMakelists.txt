@@ -34,11 +34,13 @@ set(A3P_MAIN_SOURCES res/res.qrc
                      src/incl/previewmodel.h
                      src/incl/savetoexcelfile.h
                      src/incl/tentangaplikasi.h
+                     src/incl/filemover.h
                      src/a3database.cpp
                      src/a3previewdatadialog.cpp
                      src/exporter.cpp
                      src/main.cpp
                      src/models.cpp
+                     src/filemover.cpp
                      src/previewmodel.cpp
                      src/savetoexcelfile.cpp
                      src/tentangaplikasi.cpp

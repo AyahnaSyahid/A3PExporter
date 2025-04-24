@@ -45,6 +45,7 @@ private slots:
     void on_pbExport_clicked();
     void on_btPdfSetting_clicked();
     void on_lePage_textChanged(const QString&);
+    void on_leExpF_textChanged(const QString&);
     void on_pbFilter_clicked();
     void on_pbDetach_clicked();
     void on_pushButton_clicked();
@@ -55,6 +56,7 @@ private slots:
     void on_A3PDataModel_filterChanged();
     void on_kurvaOto_toggled(bool);
     void on_actionCloseDocument_triggered();
+    void handleFailedMove(const QVariantMap& vv);
     // void onMoverFailed(const QString& tplf, const QString& tdir, consr QString& fn);
     void moveExportedFile(const QVariantMap&);
 
