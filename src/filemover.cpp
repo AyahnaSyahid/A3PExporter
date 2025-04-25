@@ -9,7 +9,6 @@ void FileMover::run() {
     auto p = params;
     QFile f(p["tempFile"].toString());
     bool ok = f.rename(p["target"].toString());
-    if(!ok) {
-        emit failed(p);
-    }
+    p["status"] = ok;
+    emit moverDone(p);
 }

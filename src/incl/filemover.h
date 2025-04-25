@@ -15,7 +15,7 @@ public:
     void run();
 
 signals:
-    void failed(const QVariantMap& m);
+    void moverDone(const QVariantMap& m);
 };
 
 #endif

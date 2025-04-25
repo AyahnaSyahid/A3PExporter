@@ -7,7 +7,7 @@
 
 int A3PDataModel::m_instance_count = 0;
 
-A3PDataModel::A3PDataModel(QObject *parent):QSqlTableModel(parent)
+A3PDataModel::A3PDataModel(QObject *parent) : QSqlTableModel(parent)
 {
     m_currentPage = 0;
     m_maxRow = 200;

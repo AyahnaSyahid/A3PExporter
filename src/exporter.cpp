@@ -269,8 +269,23 @@ void Exporter::moveExportedFile(const QVariantMap& res)
     ui->pBar->hide();
 }
 
-void Exporter::handleFailedMove(const QVariantMap& par) {
+void Exporter::handleMoveStart() {
+    QLabel *lab = findChild<QLabel*>("statusLabel");
+    lab->setText("Memindahkan file");
+}
+
+void Exporter::handleMoveDone(const QVariantMap& par) {
+    if(par["status"].toBool()) {
+        QLabel *lab = findChild<QLabel*>("statusLabel");
+        lab->setText("Selesai memindahkan");
+        emit exported(par["target"].toString());
+        auto model = findChild<A3PDataModel*>("A3PDataModel");
+        model->select();
+        ui->pBar->hide();
+        return;
+    }
     QMessageBox::information(this, "Gagal memindahkan File", QString("Temp : %1\nKe : %2").arg(par["tempFile"].toString()).arg(par["target"].toString()));
+    ui->pBar->hide();
 }
 
 void Exporter::exportResultReady(const QVariantMap& res)
@@ -314,11 +329,10 @@ void Exporter::exportResultReady(const QVariantMap& res)
     vmap.insert("target", exportName);
     
     FileMover* fmov = new FileMover(vmap);
-    connect(fmov, &FileMover::failed, this, &Exporter::handleFailedMove);
+    connect(fmov, &QThread::started, this, &Exporter::handleMoveStart);
+    connect(fmov, &FileMover::moverDone, this, &Exporter::handleMoveDone);
     connect(fmov, &QThread::finished, fmov, &QThread::deleteLater);
     fmov->start();
-    
-    ui->pBar->hide();
 }
 
 void Exporter::pdfSettingsChanged(const QVariantMap& m){
