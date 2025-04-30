@@ -195,7 +195,7 @@ void Exporter::detectResultReady(const QVariantMap& res)
             ui->leKlien->setText(QDir(res["filePath"].toString()).dirName().toUpper());
         }
         ui->lePage->setText(res["pageCount"].toInt() > 1 ? QString("1-%1").arg(res["pageCount"].toInt()) : "1");
-        QString baseName = QFileInfo(res["vbaName"].toString()).baseName();
+        QString baseName = QFileInfo(res["vbaName"].toString()).completeBaseName();
         ui->leFile->setText(baseName.replace("_", "-").toUpper());
     }
 }

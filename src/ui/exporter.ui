@@ -68,6 +68,9 @@
           </property>
           <item row="1" column="0">
            <widget class="QCheckBox" name="kurvaOto">
+            <property name="toolTip">
+             <string>Kurvakan font sebelum export</string>
+            </property>
             <property name="text">
              <string>Kurva Otomatis</string>
             </property>
@@ -85,6 +88,9 @@
           </item>
           <item row="0" column="1">
            <widget class="QComboBox" name="comboVersi">
+            <property name="toolTip">
+             <string>Pilihan Versi CorelDRAW</string>
+            </property>
             <property name="styleSheet">
              <string notr="true">text-align:&quot;right&quot;</string>
             </property>
@@ -175,6 +181,9 @@
           </item>
           <item row="0" column="2">
            <widget class="QToolButton" name="tbDet">
+            <property name="toolTip">
+             <string>Deteksi otomatis file terbuka</string>
+            </property>
             <property name="text">
              <string>Deteksi</string>
             </property>
@@ -194,7 +203,11 @@
            </widget>
           </item>
           <item row="1" column="1">
-           <widget class="QLineEdit" name="leExpF"/>
+           <widget class="QLineEdit" name="leExpF">
+            <property name="toolTip">
+             <string>Lokasi Export</string>
+            </property>
+           </widget>
           </item>
           <item row="1" column="2">
            <widget class="QToolButton" name="tbBrowse">
@@ -203,6 +216,9 @@
               <horstretch>0</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
+            </property>
+            <property name="toolTip">
+             <string>Pilih export folder</string>
             </property>
             <property name="text">
              <string>Pilih</string>
@@ -270,6 +286,9 @@
               <height>16777215</height>
              </size>
             </property>
+            <property name="toolTip">
+             <string>Nama bahan</string>
+            </property>
             <property name="alignment">
              <set>Qt::AlignCenter</set>
             </property>
@@ -277,13 +296,13 @@
           </item>
           <item row="4" column="1" colspan="4">
            <widget class="QPlainTextEdit" name="txKet">
+            <property name="toolTip">
+             <string>Keterangan tambahan</string>
+            </property>
             <property name="tabChangesFocus">
              <bool>true</bool>
             </property>
            </widget>
-          </item>
-          <item row="0" column="1" colspan="4">
-           <widget class="QLineEdit" name="leKlien"/>
           </item>
           <item row="0" column="0">
            <widget class="QLabel" name="label_4">
@@ -316,6 +335,9 @@
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
+            <property name="toolTip">
+             <string>Keterangan double side (BB)</string>
+            </property>
             <property name="text">
              <string>BB</string>
             </property>
@@ -334,7 +356,11 @@
              </widget>
             </item>
             <item>
-             <widget class="QLineEdit" name="leQty"/>
+             <widget class="QLineEdit" name="leQty">
+              <property name="toolTip">
+               <string>Keterangan jumlah halaman dan duplikasi</string>
+              </property>
+             </widget>
             </item>
            </layout>
           </item>
@@ -391,6 +417,9 @@
               <height>16777215</height>
              </size>
             </property>
+            <property name="toolTip">
+             <string>Halaman yang akan diexport</string>
+            </property>
             <property name="alignment">
              <set>Qt::AlignCenter</set>
             </property>
@@ -412,15 +441,29 @@
                 <height>22</height>
                </size>
               </property>
+              <property name="toolTip">
+               <string>Diexport oleh</string>
+              </property>
               <property name="editable">
                <bool>true</bool>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="QLineEdit" name="leFile"/>
+             <widget class="QLineEdit" name="leFile">
+              <property name="toolTip">
+               <string>Nama file export</string>
+              </property>
+             </widget>
             </item>
            </layout>
+          </item>
+          <item row="0" column="1" colspan="4">
+           <widget class="QLineEdit" name="leKlien">
+            <property name="toolTip">
+             <string>Nama Konsumen</string>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>
