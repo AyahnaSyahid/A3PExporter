@@ -2,7 +2,7 @@
 #include "ui/ui_a3previewdatadialog.h"
 #include "incl/savetoexcelfile.h"
 #include "incl/a3database.h"
-#include "sortfiltermodel.h"
+#include "incl/sortfiltermodel.h"
 
 #include <QSqlTableModel>
 #include <QSortFilterProxyModel>
@@ -81,8 +81,9 @@ A3PreviewDataDialog::A3PreviewDataDialog(QWidget *parent) :
         }
     });
     // connect(ui->cbRow, &QComboBox::currentTextChanged, this, &A3PreviewDataDialog::reload);
-    connect(ui->tbSave, &QToolButton::clicked, pm, &PreviewModel::submitAll);
+    // connect(ui->tbSave, &QToolButton::clicked, pm, &PreviewModel::submitAll);
     connect(ui->tbClose, &QToolButton::clicked, this, &A3PreviewDataDialog::close);
+    connect(ui->leKolomFilter, &QLineEdit::textChanged, filterModel, &SortFilterModel::setFilterFixedString);
     // connect(filterModel, SIGNAL(pageChanged(int, int)), this, SLOT(reload()));
     // connect(pm, SIGNAL(limitChanged()), this, SLOT(reload()));
     

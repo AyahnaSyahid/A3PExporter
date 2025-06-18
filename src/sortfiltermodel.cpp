@@ -1,4 +1,4 @@
-#include "sortfiltermodel.h"
+#include "incl/sortfiltermodel.h"
 #include <QtMath>
 
 SortFilterModel::SortFilterModel(QObject* parent) : perPage(100), cPage(0), QSortFilterProxyModel(parent) {}
