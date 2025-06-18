@@ -23,15 +23,19 @@ public:
 public slots:
     void reload();
     void manageNav();
+    void applyDateFilter();
+    void initDateFilter();
+    
+
+private slots:
+    void changeColumnFilter();
 
 private:
-    Ui::A3PreviewDataDialog *ui;
-    QString generatedFilter() const;
-    void fillDateFilter();
-    QStringList filterKolom;
-    PreviewModel *pm;
     int lastMaxPage = 1;
     void mainTableContextMenu(const QPoint &pos);
+    Ui::A3PreviewDataDialog *ui;
+    QStringList filterKolom;
+    QSqlTableModel *pm;
 
 signals:
     void filterChanged(const QString &flt = QString());

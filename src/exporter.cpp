@@ -487,7 +487,11 @@ void Exporter::on_lePage_textChanged(const QString& txt)
     auto lastCopy = parseQty(ui->leQty->text()).second;
 
     ui->sideCheck->blockSignals(true);
-    ui->sideCheck->setEnabled(kalk % 2 == 0);
+    auto isOdd = bool(kalk % 2);
+    if(isOdd) {
+        ui->sideCheck->setEnabled(false);        
+        ui->sideCheck->setChecked(false);
+    }
     ui->sideCheck->blockSignals(false);
     
     if(kalk < 1)

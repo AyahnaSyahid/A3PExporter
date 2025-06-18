@@ -1,9 +1,11 @@
 #include "incl/a3previewdatadialog.h"
 #include "ui/ui_a3previewdatadialog.h"
 #include "incl/savetoexcelfile.h"
-
 #include "incl/a3database.h"
+#include "sortfiltermodel.h"
 
+#include <QSqlTableModel>
+#include <QSortFilterProxyModel>
 #include <QKeyEvent>
 #include <QClipboard>
 #include <QFileDialog>
@@ -16,22 +18,8 @@ A3PreviewDataDialog::A3PreviewDataDialog(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::A3PreviewDataDialog)
 {
-    // Filter Kolom //
-    {
-        filterKolom <<
-" exportname || (jkertas * jkopi * sisi) LIKE \"%%1%\" ";
-        filterKolom << " klien LIKE \"%%1%\"";
-        filterKolom << " file LIKE \"%%1%\"";
-        filterKolom << " bahan LIKE \"%%1%\"";
-        filterKolom << " jkertas LIKE \"%%1%\"";
-        filterKolom << " jkopi LIKE \"%%1%\"";
-        filterKolom << " keterangan LIKE \"%%1%\"";
-        filterKolom << " (jkertas * jkopi * sisi) LIKE \"%%1%\"";
-    }
-
     ui->setupUi(this);
-    pm = new PreviewModel(this);
-    ui->mainTable->setModel(pm);
+    pm = new QSqlTableModel(this);
     ui->mainTable->setSortingEnabled(true);
     ui->mainTable->horizontalHeader()->setStretchLastSection(true);
     ui->mainTable->setAlternatingRowColors(true);
@@ -48,11 +36,14 @@ A3PreviewDataDialog::A3PreviewDataDialog(QWidget *parent) :
     ui->mainTable->setPalette(p);
     // ui->mainTable->setStyleSheet("gridline-color: rgb(100, 100, 100)");
 
-
     pm->setTable("a3pdata");
-    pm->setLimit(ui->cbRow->currentText());
     pm->select();
-
+    
+    SortFilterModel* filterModel= new SortFilterModel(this);
+    filterModel->setSourceModel(pm);
+    
+    ui->mainTable->setModel(filterModel);
+    
     ui->mainTable->hideColumn(0);
     ui->mainTable->hideColumn(1);
     pm->setHeaderData(2, Qt::Horizontal, "Konsumen");
@@ -67,27 +58,40 @@ A3PreviewDataDialog::A3PreviewDataDialog(QWidget *parent) :
     ui->mainTable->hideColumn(10);
 
     ui->mainTable->resizeColumnsToContents();
-    // ui->mainTable->viewport()->installEventFilter(this);
+    
+    // filter Copy table data as text
     ui->mainTable->installEventFilter(this);
     ui->mainTable->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(ui->mainTable, &QTableView::customContextMenuRequested, this, &A3PreviewDataDialog::mainTableContextMenu);
-    fillDateFilter();
+    
+    applyDateFilter();
+
     manageNav();
 
-    connect(ui->cbKolom, &QComboBox::currentTextChanged, this, &A3PreviewDataDialog::reload);
-    connect(ui->cbTanggal, &QComboBox::currentTextChanged, this, &A3PreviewDataDialog::reload);
-    connect(ui->tbKolomFilter, &QToolButton::clicked, this, &A3PreviewDataDialog::reload);
-    connect(ui->cbRow, SIGNAL(currentTextChanged(QString)), pm, SLOT(setLimit(QString)));
-    connect(ui->cbRow, &QComboBox::currentTextChanged, this, &A3PreviewDataDialog::reload);
+    connect(ui->cbKolom, &QComboBox::currentTextChanged, this, &A3PreviewDataDialog::changeColumnFilter);
+    connect(ui->cbTanggal, &QComboBox::currentTextChanged, this, &A3PreviewDataDialog::applyDateFilter);
+    // connect(ui->tbKolomFilter, &QToolButton::clicked, this, &A3PreviewDataDialog::reload);
+    connect(ui->cbRow, &QComboBox::currentTextChanged, [filterModel](QString p) {
+        if(p == "Maximum") {
+            filterModel->setPerPage(-1);
+        } else {
+            bool cok = false;
+            int v = p.toInt(&cok, 10);
+            if(cok) filterModel->setPerPage(v);
+        }
+    });
+    // connect(ui->cbRow, &QComboBox::currentTextChanged, this, &A3PreviewDataDialog::reload);
     connect(ui->tbSave, &QToolButton::clicked, pm, &PreviewModel::submitAll);
     connect(ui->tbClose, &QToolButton::clicked, this, &A3PreviewDataDialog::close);
-    connect(pm, SIGNAL(pageChanged()), this, SLOT(reload()));
-    connect(pm, SIGNAL(limitChanged()), this, SLOT(reload()));
-
+    // connect(filterModel, SIGNAL(pageChanged(int, int)), this, SLOT(reload()));
+    // connect(pm, SIGNAL(limitChanged()), this, SLOT(reload()));
+    
+    // filter by date
 }
 
 bool A3PreviewDataDialog::eventFilter(QObject *watched, QEvent *event)
 {
+    // implementasi CopyData CTRL+C
     if(watched == ui->mainTable)
     {
         if(event->type() == QEvent::KeyPress)
@@ -130,24 +134,17 @@ A3PreviewDataDialog::~A3PreviewDataDialog()
 
 void A3PreviewDataDialog::reload()
 {
-    // qDebug() << generatedFilter();
-    pm->setFilter(generatedFilter());
-    manageNav();
+    // pass
 }
 
 void A3PreviewDataDialog::manageNav()
 {
-    QSqlQuery q;
-    qint64 rowCount;
-    int curPage;
-    QString query("SELECT COUNT(*) FROM a3pdata WHERE "),
-            currentFilter = pm->filter();
-    q.exec(!currentFilter.isEmpty() ? query + currentFilter : "SELECT COUNT(*) FROM a3pdata");
-    rowCount = q.next() ? q.value(0).toLongLong() : 0;
-//    if(!rowCount)
-//        qDebug() << q.lastError();
-    curPage = pm->currentPage() + 1;
-    lastMaxPage = qCeil((double) rowCount / pm->currentLimit());
+    QSqlTableModel* pmod = findChild<QSqlTableModel*>();
+    SortFilterModel* smod = findChild<SortFilterModel*>();
+    
+    int curPage = smod->currentPage() + 1;
+    lastMaxPage = smod->lastPage();
+    
     ui->tbFirst->setEnabled(curPage != 1);
     ui->tbPrev->setEnabled(curPage > 1);
     ui->lPaging->setText(QString("Page %1/%2").arg(curPage).arg(lastMaxPage));
@@ -155,34 +152,21 @@ void A3PreviewDataDialog::manageNav()
     ui->tbLast->setEnabled(curPage != lastMaxPage);
 }
 
-QString A3PreviewDataDialog::generatedFilter() const
+void A3PreviewDataDialog::applyDateFilter()
 {
-    int ifilter = ui->cbKolom->currentIndex();
-    QString fltDate = ui->cbTanggal->currentText();
-    QString fltText = ui->leKolomFilter->text().simplified();
-    QString generated = fltText.isEmpty() ? "" : filterKolom[ifilter].arg(fltText);
-    QStringList filters;
-    if(!generated.isEmpty())
-        filters << generated;
-    if(fltDate != "Semua")
-        filters << QString("DATE(created) = \"%1\"").arg(fltDate);
-    return filters.join(" and ");
-}
-
-void A3PreviewDataDialog::fillDateFilter()
-{
-    QSqlQuery q("SELECT DISTINCT DATE(created) FROM a3pdata ORDER BY created DESC");
-    ui->cbTanggal->clear();
-    ui->cbTanggal->addItem("Semua");
-    while(q.next())
-        ui->cbTanggal->addItem(q.value(0).toString());
+    QSqlTableModel* pmod = findChild<QSqlTableModel*>();
+    if(ui->cbTanggal->currentIndex() != 0) {
+        QString dateFilter = ui->cbTanggal->currentText();
+        pmod->setFilter(QString("DATE(created) = '%1'").arg(dateFilter));
+    } else {
+        pmod->setFilter("");
+    }
 }
 
 void A3PreviewDataDialog::mainTableContextMenu(const QPoint &pos)
 {
     auto selMod = ui->mainTable->selectionModel();
-//    if(!selMod->hasSelection())
-//        return ;
+
     auto selRowList = selMod->selectedIndexes();
     QList<int> rows;
     int crow = -1;
@@ -227,18 +211,6 @@ void A3PreviewDataDialog::mainTableContextMenu(const QPoint &pos)
             QSqlRecord r = pm->record();
             if(!tz.isEmpty())
             {
-                /*
-                qDebug() << "insert row " << pm->insertRow(insrow);
-                pm->setData(pm->index(insrow, 1), QDateTime::currentDateTime());
-                pm->setData(pm->index(insrow, 2), tz["klien"]);
-                pm->setData(pm->index(insrow, 3), tz["file"]);
-                pm->setData(pm->index(insrow, 4), tz["bahan"]);
-                pm->setData(pm->index(insrow, 5), tz["jkertas"]);
-                pm->setData(pm->index(insrow, 6), tz["jkopi"]);
-                pm->setData(pm->index(insrow, 7), tz["sisi"]);
-                pm->setData(pm->index(insrow, 8), tz["keterangan"]);
-                pm->setData(pm->index(insrow, 9), tz["exportName"]);
-                */
                 r.setGenerated(1, false);
                 r.setValue(2, tz["klien"]);
                 r.setValue(3, tz["file"]);
@@ -258,24 +230,36 @@ void A3PreviewDataDialog::mainTableContextMenu(const QPoint &pos)
     contxMenu->deleteLater();
 }
 
+void A3PreviewDataDialog::initDateFilter() {
+    QSqlQuery q("SELECT DISTINCT DATE(created) FROM a3pdata ORDER BY created DESC");
+    ui->cbTanggal->clear();
+    ui->cbTanggal->addItem("Semua");
+    while(q.next())
+        ui->cbTanggal->addItem(q.value(0).toString());
+}
+
 void A3PreviewDataDialog::on_tbFirst_clicked()
 {
-    pm->setDisplayPage(0);
+    SortFilterModel* sm = findChild<SortFilterModel*>();
+    sm->setPage(0);
 }
 
 void A3PreviewDataDialog::on_tbPrev_clicked()
 {
-    pm->setDisplayPage(pm->currentPage() - 1);
+    SortFilterModel* sm = findChild<SortFilterModel*>();
+    sm->setPage(sm->currentPage() - 1);
 }
 
 void A3PreviewDataDialog::on_tbNext_clicked()
 {
-    pm->setDisplayPage(pm->currentPage() + 1);
+    SortFilterModel* sm = findChild<SortFilterModel*>();
+    sm->setPage(sm->currentPage() + 1);
 }
 
 void A3PreviewDataDialog::on_tbLast_clicked()
 {
-    pm->setDisplayPage(lastMaxPage - 1);
+    SortFilterModel* sm = findChild<SortFilterModel*>();
+    sm->setPage(sm->lastPage());
 }
 
 void A3PreviewDataDialog::on_tbPrint_clicked()
@@ -283,3 +267,28 @@ void A3PreviewDataDialog::on_tbPrint_clicked()
     saveToExcelFile(ui->mainTable);
 }
 
+void A3PreviewDataDialog::changeColumnFilter() {
+    SortFilterModel* sm = findChild<SortFilterModel*>();
+    switch (ui->cbKolom->currentIndex()) {
+        case 1:
+            sm->setFilterKeyColumn(2);
+            break;
+        case 2:
+            sm->setFilterKeyColumn(3);
+            break;
+        case 3:
+            sm->setFilterKeyColumn(4);
+            break;
+        case 4:
+            sm->setFilterKeyColumn(5);
+            break;
+        case 5:
+            sm->setFilterKeyColumn(6);
+            break;
+        case 6:
+            sm->setFilterKeyColumn(7);
+            break;
+        default :
+            sm->setFilterKeyColumn(-1);
+    }
+}

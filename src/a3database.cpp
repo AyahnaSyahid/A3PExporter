@@ -1,4 +1,5 @@
 #include "incl/a3database.h"
+
 namespace A3DataQuery {
 
 QString tableCreate =
@@ -220,5 +221,4 @@ void A3DataBase::_update(const qlonglong &_id, const QString &str)
         return;
     }
     return _update(_id, map);
-
 }
