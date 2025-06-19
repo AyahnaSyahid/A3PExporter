@@ -10,7 +10,7 @@ set(CMAKE_AUTORCC ON)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_BUILD_TYPE Release)
+# set(CMAKE_BUILD_TYPE Release)
 
 set(INSTALL_INTO C:/Users/AKSARA2/Desktop/QTAPP CACHE PATH "Tempat install Exported di komputer A3")
 
@@ -52,10 +52,15 @@ set(A3P_MAIN_SOURCES res/res.qrc
                      src/sortfiltermodel.cpp
                      )
 
+# add_executable(A3PExporter ${A3P_MAIN_SOURCES})
 add_executable(A3PExporter WIN32 ${A3P_MAIN_SOURCES})
 
 target_include_directories(A3PExporter PRIVATE ${CMAKE_SOURCE_DIR}/static-libs/header)
 target_link_libraries(A3PExporter PRIVATE Qt5::Widgets Qt5::Sql Qt5::AxContainer ${CMAKE_SOURCE_DIR}/static-libs/libQXlsx.a)
+
+if(DEVEL_MODE_ON)
+    target_compile_definitions(A3PExporter PRIVATE -DDEVEL_MODE_ON)
+endif()
 
 install(TARGETS A3PExporter
         RUNTIME DESTINATION ${INSTALL_INTO})

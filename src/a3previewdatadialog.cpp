@@ -38,9 +38,13 @@ A3PreviewDataDialog::A3PreviewDataDialog(QWidget *parent) :
 
     pm->setTable("a3pdata");
     pm->select();
+    while(pm->canFetchMore())
+        pm->fetchMore();
     
     SortFilterModel* filterModel= new SortFilterModel(this);
     filterModel->setSourceModel(pm);
+    filterModel->setFilterKeyColumn(-1);
+    filterModel->setFilterCaseSensitivity(Qt::CaseInsensitive);
     
     ui->mainTable->setModel(filterModel);
     
@@ -58,21 +62,22 @@ A3PreviewDataDialog::A3PreviewDataDialog(QWidget *parent) :
     ui->mainTable->hideColumn(10);
 
     ui->mainTable->resizeColumnsToContents();
+    // init cbTanggal
+    initDateFilter();
+    ui->cbTanggal->setCurrentIndex(0);
     
     // filter Copy table data as text
     ui->mainTable->installEventFilter(this);
     ui->mainTable->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(ui->mainTable, &QTableView::customContextMenuRequested, this, &A3PreviewDataDialog::mainTableContextMenu);
     
-    applyDateFilter();
-
     manageNav();
 
     connect(ui->cbKolom, &QComboBox::currentTextChanged, this, &A3PreviewDataDialog::changeColumnFilter);
     connect(ui->cbTanggal, &QComboBox::currentTextChanged, this, &A3PreviewDataDialog::applyDateFilter);
     // connect(ui->tbKolomFilter, &QToolButton::clicked, this, &A3PreviewDataDialog::reload);
     connect(ui->cbRow, &QComboBox::currentTextChanged, [filterModel](QString p) {
-        if(p == "Maximum") {
+        if(p.toLower().trimmed() == "maksimum") {
             filterModel->setPerPage(-1);
         } else {
             bool cok = false;
@@ -80,14 +85,13 @@ A3PreviewDataDialog::A3PreviewDataDialog(QWidget *parent) :
             if(cok) filterModel->setPerPage(v);
         }
     });
-    // connect(ui->cbRow, &QComboBox::currentTextChanged, this, &A3PreviewDataDialog::reload);
-    // connect(ui->tbSave, &QToolButton::clicked, pm, &PreviewModel::submitAll);
     connect(ui->tbClose, &QToolButton::clicked, this, &A3PreviewDataDialog::close);
-    connect(ui->leKolomFilter, &QLineEdit::textChanged, filterModel, &SortFilterModel::setFilterFixedString);
-    // connect(filterModel, SIGNAL(pageChanged(int, int)), this, SLOT(reload()));
-    // connect(pm, SIGNAL(limitChanged()), this, SLOT(reload()));
-    
-    // filter by date
+    connect(ui->leKolomFilter, &QLineEdit::textChanged, [filterModel](QString s) {
+        filterModel->setFilterFixedString(s); });
+    connect(ui->leKolomFilter, &QLineEdit::textChanged, this, &A3PreviewDataDialog::manageNav, Qt::QueuedConnection);
+    connect(filterModel, SIGNAL(pageChanged(int, int)), this, SLOT(manageNav()));
+    connect(filterModel, SIGNAL(perPageChanged(int)), this, SLOT(manageNav()));
+    connect(filterModel, SIGNAL(filterKeyChanged(int)), this, SLOT(manageNav()));
 }
 
 bool A3PreviewDataDialog::eventFilter(QObject *watched, QEvent *event)
@@ -143,14 +147,16 @@ void A3PreviewDataDialog::manageNav()
     QSqlTableModel* pmod = findChild<QSqlTableModel*>();
     SortFilterModel* smod = findChild<SortFilterModel*>();
     
-    int curPage = smod->currentPage() + 1;
-    lastMaxPage = smod->lastPage();
+    int cp = smod->currentPage() + 1;
+    int mp = smod->lastPage() + 1;
     
-    ui->tbFirst->setEnabled(curPage != 1);
-    ui->tbPrev->setEnabled(curPage > 1);
-    ui->lPaging->setText(QString("Page %1/%2").arg(curPage).arg(lastMaxPage));
-    ui->tbNext->setEnabled(curPage < lastMaxPage);
-    ui->tbLast->setEnabled(curPage != lastMaxPage);
+    ui->tbFirst->setEnabled(cp != 1);
+    ui->tbPrev->setEnabled(cp > 1);
+    ui->lPaging->setText(QString("Page %1/%2").arg(cp).arg(mp));
+    ui->tbNext->setEnabled(cp < mp);
+    ui->tbLast->setEnabled(cp != mp);
+    
+    qDebug() << "Curent Page / Max :" << cp << "/" << mp; 
 }
 
 void A3PreviewDataDialog::applyDateFilter()
@@ -234,9 +240,9 @@ void A3PreviewDataDialog::mainTableContextMenu(const QPoint &pos)
 void A3PreviewDataDialog::initDateFilter() {
     QSqlQuery q("SELECT DISTINCT DATE(created) FROM a3pdata ORDER BY created DESC");
     ui->cbTanggal->clear();
-    ui->cbTanggal->addItem("Semua");
     while(q.next())
-        ui->cbTanggal->addItem(q.value(0).toString());
+        ui->cbTanggal->insertItem(-1, q.value(0).toString(), q.value(0));
+    ui->cbTanggal->insertItem(-1, "Semua", "Semua");
 }
 
 void A3PreviewDataDialog::on_tbFirst_clicked()

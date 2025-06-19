@@ -152,6 +152,10 @@ Exporter::Exporter(QWidget *parent)
     
     connect(this, &Exporter::exported, bahanModel, [bahanModel](){ bahanModel->setQuery(bahanModel->query().lastQuery()); });
     connect(this, &Exporter::exported, klienModel, [klienModel](){ klienModel->setQuery(klienModel->query().lastQuery()); });
+    
+#ifdef DEVEL_MODE_ON
+    setWindowTitle(windowTitle() + " - Development");
+#endif
 }
 
 Exporter::~Exporter()
@@ -489,8 +493,11 @@ void Exporter::on_lePage_textChanged(const QString& txt)
     ui->sideCheck->blockSignals(true);
     auto isOdd = bool(kalk % 2);
     if(isOdd) {
-        ui->sideCheck->setEnabled(false);        
-        ui->sideCheck->setChecked(false);
+        if(ui->sideCheck->isChecked())
+            ui->sideCheck->setChecked(false);
+        ui->sideCheck->setEnabled(false);
+    } else {
+        ui->sideCheck->setEnabled(true);
     }
     ui->sideCheck->blockSignals(false);
     
