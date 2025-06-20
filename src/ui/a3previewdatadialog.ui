@@ -35,7 +35,7 @@
       <item>
        <widget class="QLabel" name="label_2">
         <property name="text">
-         <string>Filter Kolom</string>
+         <string>Filter</string>
         </property>
        </widget>
       </item>
@@ -78,20 +78,13 @@
         </item>
         <item>
          <property name="text">
-          <string>Total Klik</string>
+          <string>Nama File</string>
          </property>
         </item>
        </widget>
       </item>
       <item>
        <widget class="QLineEdit" name="leKolomFilter"/>
-      </item>
-      <item>
-       <widget class="QToolButton" name="tbKolomFilter">
-        <property name="text">
-         <string>Terapkan</string>
-        </property>
-       </widget>
       </item>
       <item>
        <spacer name="horizontalSpacer_2">
@@ -109,7 +102,7 @@
       <item>
        <widget class="QLabel" name="label_3">
         <property name="text">
-         <string>Filter Tanggal</string>
+         <string>Tanggal</string>
         </property>
        </widget>
       </item>
@@ -290,22 +283,5 @@
   </layout>
  </widget>
  <resources/>
- <connections>
-  <connection>
-   <sender>leKolomFilter</sender>
-   <signal>returnPressed()</signal>
-   <receiver>tbKolomFilter</receiver>
-   <slot>click()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>230</x>
-     <y>21</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>323</x>
-     <y>21</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
 </ui>

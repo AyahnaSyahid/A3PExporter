@@ -1,38 +1,35 @@
 #ifndef PREVIEWMODEL_H
 #define PREVIEWMODEL_H
 
-#include <QSqlTableModel>
-#include <QObject>
+#include <QSqlQueryModel>
+
 #include <QtDebug>
 
-class PreviewModel : public QSqlTableModel
+class PreviewModel : public QSqlQueryModel
 {
-    Q_OBJECT
-    int rowLimit = 100;
-    int showPage = 0;
+  Q_OBJECT
 
 public:
-    explicit PreviewModel(QObject *parent = nullptr);
-    virtual QVariant data(const QModelIndex &index, int role) const override;
-    QString limitStatement() const;
-    inline const int &currentPage() {return showPage;}
-    inline const int &currentLimit() {return rowLimit;}
+  explicit PreviewModel(QObject *parent = nullptr);
+  ~PreviewModel();
+  virtual QVariant data(const QModelIndex &index, int role) const override;
+  int maxPage() const;
 
 public slots:
-    void setLimit(const int &lim);
-    void setLimit(const QString &lim);
-    void setDisplayPage(const QString &page);
-    void setDisplayPage(const int &page);
+  void nextPage();
+  void prevPage();
+  void firstPage();
+  void lastPage();
 
-protected:
-    virtual QString selectStatement() const override;
+  void filterDate(const QString& date);
+
+  void setLimit(int lim);
+
+  void updateQuery();
 
 signals:
-    void pageChanged();
-    void limitChanged();
-
-public:
-    virtual void sort(int column, Qt::SortOrder ord) override;
+  void pageChanged(int current, int max);
+  void limitChanged(int lim);
 };
 
 #endif // PREVIEWMODEL_H
