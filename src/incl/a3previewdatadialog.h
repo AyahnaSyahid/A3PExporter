@@ -21,11 +21,11 @@ public:
     ~A3PreviewDataDialog();
 
 public slots:
-    void manageNav(int c, int m)
+    void manageNav(int c, int m);
     void initDateFilter();
 
-private slots:
-    void changeColumnFilter();
+// private slots:
+    // void changeColumnFilter();
 
 private:
     int lastMaxPage = 1;
@@ -37,10 +37,10 @@ signals:
     void tableUpdated();
 
 private slots:
-    void on_tbFirst_clicked();
-    void on_tbPrev_clicked();
-    void on_tbNext_clicked();
-    void on_tbLast_clicked();
+    // void on_tbFirst_clicked();
+    // void on_tbPrev_clicked();
+    // void on_tbNext_clicked();
+    // void on_tbLast_clicked();
     void on_tbPrint_clicked();
 };
 

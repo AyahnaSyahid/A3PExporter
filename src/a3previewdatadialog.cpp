@@ -62,7 +62,7 @@ A3PreviewDataDialog::A3PreviewDataDialog(QWidget *parent)
   ui->mainTable->installEventFilter(this);
   ui->mainTable->setContextMenuPolicy(Qt::CustomContextMenu);
   connect(ui->mainTable, &QTableView::customContextMenuRequested, this, &A3PreviewDataDialog::mainTableContextMenu);
-  connect(ui->cbKolom, &QComboBox::currentIndexChanged, [=](int i){
+  connect(ui->cbKolom, QOverload<int>::of(&QComboBox::currentIndexChanged), [=](int i){
     auto model = findChild<PreviewModel*>();
     switch (i) {
       case 1:
@@ -80,10 +80,10 @@ A3PreviewDataDialog::A3PreviewDataDialog(QWidget *parent)
       case 5:
         model->setProperty("filterBy", "filterCopy");
         break;
-      case 5:
+      case 6:
         model->setProperty("filterBy", "filterInfo");
         break;
-      case 6:
+      case 7:
         model->setProperty("filterBy", "filterExportName");
         break;
       default:
@@ -92,24 +92,34 @@ A3PreviewDataDialog::A3PreviewDataDialog(QWidget *parent)
     model->updateQuery();
   });
 
-  connect(ui->cbTanggal, &QComboBox::currentIndexChanged, [=](int i) {
+  connect(ui->cbTanggal, QOverload<int>::of(&QComboBox::currentIndexChanged), [=](int i) {
     auto model = findChild<PreviewModel*>();
     QString va = ui->cbTanggal->itemData(i).toString() == "all" ? "%" : ui->cbTanggal->itemData(i).toString();
     model->setProperty("filterDate", va);
     model->updateQuery();
   });
 
-  connect(ui->cbRow, &QComboBox::currentIndexChanged, [=](int i) {
+  connect(ui->cbRow, QOverload<int>::of(&QComboBox::currentIndexChanged), [=](int i) {
     auto model = findChild<PreviewModel*>();
-    
+    int perPage = ui->cbRow->itemData(ui->cbRow->currentIndex(), Qt::DisplayRole).toInt();
+    model->setProperty("rowLimit", perPage);
+    model->updateQuery();
   });
+
   connect(ui->tbClose, &QToolButton::clicked, this, &A3PreviewDataDialog::close);
-  connect(ui->leKolomFilter, &QLineEdit::textChanged, [filterModel](QString s) {
-      filterModel->setFilterFixedString(s); });
-  connect(ui->leKolomFilter, &QLineEdit::textChanged, this, &A3PreviewDataDialog::manageNav, Qt::QueuedConnection);
-  connect(filterModel, SIGNAL(pageChanged(int, int)), this, SLOT(manageNav()));
-  connect(filterModel, SIGNAL(perPageChanged(int)), this, SLOT(manageNav()));
-  connect(filterModel, SIGNAL(filterKeyChanged(int)), this, SLOT(manageNav()));
+  connect(ui->leKolomFilter, &QLineEdit::textChanged, [=](QString s) {
+    auto model = findChild<PreviewModel*>();
+    model->setProperty("filterValue", s.isEmpty() ? "%" : QString("%%1%").arg(s));
+    qDebug() << "filter value" << model->property("filterValue").toString();
+    model->updateQuery();
+      });
+
+  connect(pm, SIGNAL(pageChanged(int, int)), this, SLOT(manageNav(int, int)));
+  connect(ui->tbFirst, &QToolButton::clicked, pm, &PreviewModel::firstPage);
+  connect(ui->tbPrev, &QToolButton::clicked, pm, &PreviewModel::prevPage);
+  connect(ui->tbNext, &QToolButton::clicked, pm, &PreviewModel::nextPage);
+  connect(ui->tbLast, &QToolButton::clicked, pm, &PreviewModel::lastPage);
+  pm->updateQuery();
 }
 
 bool A3PreviewDataDialog::eventFilter(QObject *watched, QEvent *event)
@@ -155,38 +165,25 @@ A3PreviewDataDialog::~A3PreviewDataDialog()
     delete ui;
 }
 
-void A3PreviewDataDialog::reload()
-{
-    // pass
+void A3PreviewDataDialog::manageNav(int cp, int mp)
+{   
+  ui->tbFirst->setEnabled(cp != 1);
+  ui->tbPrev->setEnabled(cp > 1);
+  ui->lPaging->setText(QString("Page %1/%2").arg(cp).arg(mp));
+  ui->tbNext->setEnabled(cp < mp);
+  ui->tbLast->setEnabled(cp != mp);  
 }
 
-void A3PreviewDataDialog::manageNav()
-{
-    QSqlTableModel* pmod = findChild<QSqlTableModel*>();
-    SortFilterModel* smod = findChild<SortFilterModel*>();
-    
-    int cp = smod->currentPage() + 1;
-    int mp = smod->lastPage() + 1;
-    
-    ui->tbFirst->setEnabled(cp != 1);
-    ui->tbPrev->setEnabled(cp > 1);
-    ui->lPaging->setText(QString("Page %1/%2").arg(cp).arg(mp));
-    ui->tbNext->setEnabled(cp < mp);
-    ui->tbLast->setEnabled(cp != mp);
-    
-    qDebug() << "Curent Page / Max :" << cp << "/" << mp; 
-}
-
-void A3PreviewDataDialog::applyDateFilter()
-{
-    QSqlTableModel* pmod = findChild<QSqlTableModel*>();
-    if(ui->cbTanggal->currentIndex() != 0) {
-        QString dateFilter = ui->cbTanggal->currentText();
-        pmod->setFilter(QString("DATE(created) = '%1'").arg(dateFilter));
-    } else {
-        pmod->setFilter("");
-    }
-}
+// void A3PreviewDataDialog::applyDateFilter()
+// {
+    // QSqlTableModel* pmod = findChild<QSqlTableModel*>();
+    // if(ui->cbTanggal->currentIndex() != 0) {
+        // QString dateFilter = ui->cbTanggal->currentText();
+        // pmod->setFilter(QString("DATE(created) = '%1'").arg(dateFilter));
+    // } else {
+        // pmod->setFilter("");
+    // }
+// }
 
 void A3PreviewDataDialog::mainTableContextMenu(const QPoint &pos)
 {
@@ -213,19 +210,21 @@ void A3PreviewDataDialog::mainTableContextMenu(const QPoint &pos)
     contxMenu->addAction(addAct);
     contxMenu->addAction(picFromFile);
     contxMenu->move(ui->mainTable->mapToGlobal(pos));
-    connect(delAct, &QAction::triggered, pm, [=](){
-        // pm->removeRows(rows.first(), rows.count());
+    connect(delAct, &QAction::triggered, [=](){
+        auto pm = findChild<PreviewModel*>();
         for( int c : rows )
         {
             pm->removeRow(c);
         }
     });
-    connect(addAct, &QAction::triggered, pm, [=](){
+    connect(addAct, &QAction::triggered, [=](){
+        auto pm = findChild<PreviewModel*>();
         int rAt = rows.last() + 1;
         pm->insertRow(rAt);
     });
-    connect(picFromFile, &QAction::triggered, pm, [=](){
+    connect(picFromFile, &QAction::triggered, [=](){
         A3DataBase ab;
+        auto pm = findChild<PreviewModel*>();
         QStringList fname = QFileDialog::getOpenFileNames(this, "Pilih file", "", "PDF File (*.pdf)");
         if(fname.isEmpty())
             return;
@@ -263,57 +262,33 @@ void A3PreviewDataDialog::initDateFilter() {
     ui->cbTanggal->insertItem(-1, "Semua", "all");
 }
 
-void A3PreviewDataDialog::on_tbFirst_clicked()
-{
-    SortFilterModel* sm = findChild<SortFilterModel*>();
-    sm->setPage(0);
-}
-
-void A3PreviewDataDialog::on_tbPrev_clicked()
-{
-    SortFilterModel* sm = findChild<SortFilterModel*>();
-    sm->setPage(sm->currentPage() - 1);
-}
-
-void A3PreviewDataDialog::on_tbNext_clicked()
-{
-    SortFilterModel* sm = findChild<SortFilterModel*>();
-    sm->setPage(sm->currentPage() + 1);
-}
-
-void A3PreviewDataDialog::on_tbLast_clicked()
-{
-    SortFilterModel* sm = findChild<SortFilterModel*>();
-    sm->setPage(sm->lastPage());
-}
-
 void A3PreviewDataDialog::on_tbPrint_clicked()
 {
     saveToExcelFile(ui->mainTable);
 }
 
-void A3PreviewDataDialog::changeColumnFilter() {
-    SortFilterModel* sm = findChild<SortFilterModel*>();
-    switch (ui->cbKolom->currentIndex()) {
-        case 1:
-            sm->setFilterKeyColumn(2);
-            break;
-        case 2:
-            sm->setFilterKeyColumn(3);
-            break;
-        case 3:
-            sm->setFilterKeyColumn(4);
-            break;
-        case 4:
-            sm->setFilterKeyColumn(5);
-            break;
-        case 5:
-            sm->setFilterKeyColumn(6);
-            break;
-        case 6:
-            sm->setFilterKeyColumn(7);
-            break;
-        default :
-            sm->setFilterKeyColumn(-1);
-    }
-}
+// void A3PreviewDataDialog::changeColumnFilter() {
+    // SortFilterModel* sm = findChild<SortFilterModel*>();
+    // switch (ui->cbKolom->currentIndex()) {
+        // case 1:
+            // sm->setFilterKeyColumn(2);
+            // break;
+        // case 2:
+            // sm->setFilterKeyColumn(3);
+            // break;
+        // case 3:
+            // sm->setFilterKeyColumn(4);
+            // break;
+        // case 4:
+            // sm->setFilterKeyColumn(5);
+            // break;
+        // case 5:
+            // sm->setFilterKeyColumn(6);
+            // break;
+        // case 6:
+            // sm->setFilterKeyColumn(7);
+            // break;
+        // default :
+            // sm->setFilterKeyColumn(-1);
+    // }
+// }

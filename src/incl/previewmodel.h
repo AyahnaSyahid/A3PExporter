@@ -14,6 +14,8 @@ public:
   ~PreviewModel();
   virtual QVariant data(const QModelIndex &index, int role) const override;
   int maxPage() const;
+  
+  bool insertRecord(int, const QSqlRecord&);
 
 public slots:
   void nextPage();
@@ -21,7 +23,7 @@ public slots:
   void firstPage();
   void lastPage();
 
-  void filterDate(const QString& date);
+  // void filterDate(const QString& date);
 
   void setLimit(int lim);
 
