@@ -6,53 +6,12 @@
 #include <QtDebug>
 
 PreviewModel::PreviewModel(QObject* parent)
-    : QSqlQueryModel(parent) {
+    : __max_page(1), QSqlQueryModel(parent) {
   setProperty("currentPage", 1);
   setProperty("filterDate", "all");
   setProperty("rowLimit", 100);
   setProperty("filterBy", "all");
   setProperty("filterValue", "%");
-  
-  QString baseQuery(R"--(
-    SELECT * FROM a3pdata WHERE 
-      date(created) LIKE :filterDate AND 
-      klien LIKE :filterKlien AND
-      file LIKE :filterFile AND
-      bahan LIKE :filterBahan AND
-      CAST(jkertas AS TEXT) LIKE :filterPage AND
-      CAST(jkopi AS TEXT) LIKE :filterCopy AND
-      keterangan LIKE :filterInfo AND
-      exportName LIKE :filterExportName 
-    )--"),
-  limitingQuery(R"--(
-    SELECT * FROM a3pdata WHERE 
-      date(created) LIKE :filterDate AND 
-      klien LIKE :filterKlien AND
-      file LIKE :filterFile AND
-      bahan LIKE :filterBahan AND
-      CAST(jkertas AS TEXT) LIKE :filterPage AND
-      CAST(jkopi AS TEXT) LIKE :filterCopy AND
-      keterangan LIKE :filterInfo AND
-      exportName LIKE :filterExportName 
-      LIMIT :limitCount OFFSET :limitOffset
-    )--"),
-  calculateQuery(R"--(
-    SELECT COUNT(id) FROM a3pdata WHERE
-      date(created) LIKE :filterDate AND 
-      klien LIKE :filterKlien AND
-      file LIKE :filterFile AND
-      bahan LIKE :filterBahan AND
-      CAST(jkertas AS TEXT) LIKE :filterPage AND
-      CAST(jkopi AS TEXT) LIKE :filterCopy AND
-      keterangan LIKE :filterInfo AND
-      exportName LIKE :filterExportName 
-  )--"),
-  selectiveQuery(R"--(
-    SELECT * FROM a3pdata WHERE %1 LIKE %2;
-  )--");
-  setProperty("baseQuery", baseQuery);
-  setProperty("limitingQuery", limitingQuery);
-  setProperty("calculateQuery", calculateQuery);
   updateQuery();
 };
 
@@ -60,44 +19,99 @@ PreviewModel::~PreviewModel() {}
 
 void PreviewModel::updateQuery() {
   QSqlQuery q;
-  // QSqlQuery q, c;
-  // c.prepare(property("calculateQuery").toString());
+  QSqlQuery m;
+  bool use_filterDate = property("filterDate").toString() != "all",
+       use_filterBy = property("filterBy").toString() != "all",
+       use_limit = property("rowLimit").toInt() > 0;
   
-  
-  if(property("rowLimit").toInt() > 0) {
-    q.prepare(property("limitingQuery").toString());
-    q.bindValue(":limitCount", property("rowLimit").toInt());
-    q.bindValue(":limitOffset", (property("currentPage").toInt() - 1) * property("rowLimit").toInt());
-  } else {
-    q.prepare(property("baseQuery").toString());
-  }
-  
-  q.bindValue(":filterDate", "%");
-  q.bindValue(":filterKlien", "%");
-  q.bindValue(":filterFile", "%");
-  q.bindValue(":filterBahan", "%");
-  q.bindValue(":filterPage", "%");
-  q.bindValue(":filterCopy", "%");
-  q.bindValue(":filterInfo", "%");
-  q.bindValue(":filterExportName", "%");
+  QString counter_query,
+          model_query,
+          dateFilter_query,
+          columnFilter_query,
+          limit_query;
 
+  counter_query = "SELECT COUNT(id) FROM a3pdata";
+  model_query = "SELECT * FROM a3pdata";
+  
   if(property("filterDate").toString() != "all") {
-    q.bindValue(":filterDate", property("filterDate").toString());    
+    dateFilter_query = " DATE(created) = :filterDate ";
   }
   
-  if(property("filterBy").toString() != "all" && property("filterValue").toString() != "%") {
-    // pastikan nilai dari filterBy mengikuti aturan nama placeholder query
-    q.bindValue(QString(":%1").arg(property("filterBy").toString()), property("filterValue"));
+  if(property("filterBy").toString() == "all") {
+    columnFilter_query = "klien || file || bahan || jkertas || jkopi || keterangan LIKE :filterValue";
+  } else {
+    QString filterValue_string = property("filterValue").toString();
+    if(filterValue_string != "%" && ! filterValue_string.isEmpty()) {
+      columnFilter_query = QString("%1 LIKE :filterValue").arg(property("filterBy").toString());
+    } else {
+      columnFilter_query = "";
+    }
   }
-
-  q.exec();
-  setQuery(q);
-  if(lastError().isValid()) {
-    qDebug() << lastError();
-    qDebug() << query().lastQuery();
-    qDebug() << query().boundValues();
+  
+  // get max first
+  if(!dateFilter_query.isEmpty() || !columnFilter_query.isEmpty()) {
+    counter_query += " WHERE ";
+    model_query += " WHERE ";
+    if(!dateFilter_query.isEmpty()) {
+      counter_query += dateFilter_query;
+      model_query += dateFilter_query;
+      if(!columnFilter_query.isEmpty()) {
+        counter_query += " AND ";
+        model_query += " AND ";
+      }
+    }
+    counter_query += columnFilter_query;
+    model_query += columnFilter_query;
   }
-  emit pageChanged(property("currentPage").toInt(), maxPage());
+  
+  q.prepare(counter_query);
+  
+  if(!dateFilter_query.isEmpty()) {
+    q.bindValue(":filterDate", property("filterDate"));
+  }
+  if(!columnFilter_query.isEmpty()) {
+    q.bindValue(":filterValue", property("filterValue"));
+  }
+  
+  
+  if(!q.exec() && q.lastError().isValid()) {
+    qDebug() << "query calculate error";
+    qDebug() << counter_query;
+    qDebug() << q.boundValues();
+  }
+  q.next();
+  int vMaxPage = q.value(0).toInt();
+  __max_page = qCeil(vMaxPage / (property("rowLimit").toInt() < 1 ? 1 : property("rowLimit").toInt()));
+  
+  qDebug() << QString("MaxPage : %1 | RowCount : %2 | CurrentPage : %3").arg(__max_page).arg(vMaxPage).arg(property("rowLimit").toInt());
+  
+  if(property("currentPage").toInt() > __max_page) {
+    setProperty("currentPage", __max_page);
+  }
+  
+  // get model query
+  if(use_limit) {
+    model_query += QString(" LIMIT %1 OFFSET %2").arg(property("rowLimit").toInt()).arg(property("rowLimit").toInt() * property("currentPage").toInt());
+  }
+  
+  m.prepare(model_query);
+  
+  if(!dateFilter_query.isEmpty()) {
+    m.bindValue(":filterDate", property("filterDate"));
+  }
+  
+  if(!columnFilter_query.isEmpty()) {
+    m.bindValue(":filterValue", property("filterValue"));
+  }
+  
+  if(!m.exec() && m.lastError().isValid()) {
+    qDebug() << "query model error";
+    qDebug() << model_query;
+    qDebug() << m.boundValues();
+  }
+  
+  setQuery(m);
+  emit pageChanged(property("currentPage").toInt(), __max_page);
 };
 
 void PreviewModel::nextPage() {
@@ -118,54 +132,55 @@ void PreviewModel::firstPage() {
 }
 
 void PreviewModel::lastPage() {
-  setProperty("currentPage", maxPage());
+  setProperty("currentPage", __max_page);
   updateQuery();
 }
 
-int PreviewModel::maxPage() const {
-  QSqlQuery q;
-  q.prepare(property("calculateQuery").toString());
-  auto fval = property("filterValue").toString();
+const int& PreviewModel::maxPage() const {
+  return __max_page;
+  // QSqlQuery q;
+  // q.prepare(property("calculateQuery").toString());
+  // auto fval = property("filterValue").toString();
 
-  q.bindValue(":filterDate", "%");
-  q.bindValue(":filterKlien", "%");
-  q.bindValue(":filterFile", "%");
-  q.bindValue(":filterBahan", "%");
-  q.bindValue(":filterPage", "%");
-  q.bindValue(":filterCopy", "%");
-  q.bindValue(":filterInfo", "%");
-  q.bindValue(":filterExportName", "%");
+  // q.bindValue(":filterDate", "%");
+  // q.bindValue(":filterKlien", "%");
+  // q.bindValue(":filterFile", "%");
+  // q.bindValue(":filterBahan", "%");
+  // q.bindValue(":filterPage", "%");
+  // q.bindValue(":filterCopy", "%");
+  // q.bindValue(":filterInfo", "%");
+  // q.bindValue(":filterExportName", "%");
 
-  if(property("filterDate").toString() != "all") {
-    q.bindValue(":filterDate", property("filterDate").toString());    
-  }
+  // if(property("filterDate").toString() != "all") {
+    // q.bindValue(":filterDate", property("filterDate").toString());    
+  // }
   
-  if(property("filterBy").toString() != "all" && property("filterValue").toString() != "%") {
+  // if(property("filterBy").toString() != "all" && property("filterValue").toString() != "%") {
     // pastikan nilai dari filterBy mengikuti aturan nama placeholder query
-    q.bindValue(QString(":%1").arg(property("filterBy").toString()), property("filterValue"));
-  } else {
-    q.bindValue(":filterDate", fval);
-    q.bindValue(":filterKlien", fval);
-    q.bindValue(":filterFile", fval);
-    q.bindValue(":filterBahan", fval);
-    q.bindValue(":filterPage", fval);
-    q.bindValue(":filterCopy", fval);
-    q.bindValue(":filterInfo", fval);
-    q.bindValue(":filterExportName", fval);
-  }
+    // q.bindValue(QString(":%1").arg(property("filterBy").toString()), property("filterValue"));
+  // } else {
+    // q.bindValue(":filterDate", fval);
+    // q.bindValue(":filterKlien", fval);
+    // q.bindValue(":filterFile", fval);
+    // q.bindValue(":filterBahan", fval);
+    // q.bindValue(":filterPage", fval);
+    // q.bindValue(":filterCopy", fval);
+    // q.bindValue(":filterInfo", fval);
+    // q.bindValue(":filterExportName", fval);
+  // }
   
-  bool ok = q.exec() && q.next();
-  if(!ok) {
-    qDebug() << "Error calculating maxPage";
-    qDebug() << q.lastError();
-    qDebug() << q.lastQuery();
-    qDebug() << q.boundValues();
-    qDebug() << " <<<<< Error calculating maxPage";
-  }
-  int rlim = property("rowLimit").toInt();
-  qDebug() << "total row :" << q.value(0).toDouble(); 
-  qDebug() << "current limit :" << rlim; 
-  return qCeil(q.value(0).toDouble() / (rlim < 1 ? q.value(0).toDouble() : rlim));
+  // bool ok = q.exec() && q.next();
+  // if(!ok) {
+    // qDebug() << "Error calculating maxPage";
+    // qDebug() << q.lastError();
+    // qDebug() << q.lastQuery();
+    // qDebug() << q.boundValues();
+    // qDebug() << " <<<<< Error calculating maxPage";
+  // }
+  // int rlim = property("rowLimit").toInt();
+  // qDebug() << "total row :" << q.value(0).toDouble(); 
+  // qDebug() << "current limit :" << rlim; 
+  // return qCeil(q.value(0).toDouble() / (rlim < 1 ? q.value(0).toDouble() : rlim));
 }
 
 void PreviewModel::setLimit(int l) {

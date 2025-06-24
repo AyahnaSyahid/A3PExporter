@@ -13,7 +13,7 @@ public:
   explicit PreviewModel(QObject *parent = nullptr);
   ~PreviewModel();
   virtual QVariant data(const QModelIndex &index, int role) const override;
-  int maxPage() const;
+  const int& maxPage() const;
   
   bool insertRecord(int, const QSqlRecord&);
 
@@ -32,6 +32,9 @@ public slots:
 signals:
   void pageChanged(int current, int max);
   void limitChanged(int lim);
+
+private:
+  int __max_page;
 };
 
 #endif // PREVIEWMODEL_H
