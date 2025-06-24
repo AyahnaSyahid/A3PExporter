@@ -48,8 +48,8 @@ set(A3P_MAIN_SOURCES res/res.qrc
                      src/tentangaplikasi.cpp
                      src/corelmanager/corelexecutor.cpp
                      src/corelmanager/incl/corelexecutor.h
-                     src/incl/sortfiltermodel.h
-                     src/sortfiltermodel.cpp
+                     # src/incl/sortfiltermodel.h
+                     # src/sortfiltermodel.cpp
                      )
 
 if(INCLUDE_WIN32)

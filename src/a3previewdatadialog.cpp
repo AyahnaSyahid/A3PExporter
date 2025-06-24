@@ -13,8 +13,6 @@
 #include <QMenu>
 #include <QtDebug>
 
-
-
 A3PreviewDataDialog::A3PreviewDataDialog(QWidget *parent)
     : QDialog(parent), ui(new Ui::A3PreviewDataDialog)
 {
@@ -24,6 +22,7 @@ A3PreviewDataDialog::A3PreviewDataDialog(QWidget *parent)
   ui->mainTable->setAlternatingRowColors(true);
   ui->mainTable->verticalHeader()->setMinimumSectionSize(10);
   ui->mainTable->verticalHeader()->setDefaultSectionSize(17);
+  ui->mainTable->verticalHeader()->hide();
   // ui->mainTable->verticalHeader()->hide();
 
   // Warna Table
@@ -36,23 +35,9 @@ A3PreviewDataDialog::A3PreviewDataDialog(QWidget *parent)
   // ui->mainTable->setStyleSheet("gridline-color: rgb(100, 100, 100)");
 
   PreviewModel* pm = new PreviewModel(this);
-  
-  ui->mainTable->setModel(pm);
-  ui->mainTable->hideColumn(0);
-  ui->mainTable->hideColumn(1);
-
-  pm->setHeaderData(2, Qt::Horizontal, "Konsumen");
-  pm->setHeaderData(3, Qt::Horizontal, "File");
-  pm->setHeaderData(4, Qt::Horizontal, "Bahan");
-  pm->setHeaderData(5, Qt::Horizontal, "Page/Halaman");
-  pm->setHeaderData(6, Qt::Horizontal, "Ripit");
-  ui->mainTable->hideColumn(7);
-  pm->setHeaderData(7, Qt::Horizontal, "Sisi");
-  pm->setHeaderData(8, Qt::Horizontal, "Keterangan");
-  ui->mainTable->hideColumn(9);
-  ui->mainTable->hideColumn(10);
-
-  ui->mainTable->resizeColumnsToContents();
+  QSortFilterProxyModel* proxy = new QSortFilterProxyModel(this);
+  proxy->setSourceModel(pm);
+  pm->updateQuery();
   // init cbTanggal
   initDateFilter();
 
@@ -66,25 +51,25 @@ A3PreviewDataDialog::A3PreviewDataDialog(QWidget *parent)
     auto model = findChild<PreviewModel*>();
     switch (i) {
       case 1:
-        model->setProperty("filterBy", "filterKlien");
+        model->setProperty("filterBy", "klien");
         break;
       case 2:
-        model->setProperty("filterBy", "filterFile");
+        model->setProperty("filterBy", "file");
         break;
       case 3:
-        model->setProperty("filterBy", "filterBahan");
+        model->setProperty("filterBy", "bahan");
         break;
       case 4:
-        model->setProperty("filterBy", "filterPage");
+        model->setProperty("filterBy", "jkertas");
         break;
       case 5:
-        model->setProperty("filterBy", "filterCopy");
+        model->setProperty("filterBy", "jkopi");
         break;
       case 6:
-        model->setProperty("filterBy", "filterInfo");
+        model->setProperty("filterBy", "keterangan");
         break;
       case 7:
-        model->setProperty("filterBy", "filterExportName");
+        model->setProperty("filterBy", "exportName");
         break;
       default:
         model->setProperty("filterBy", "all");
@@ -109,7 +94,7 @@ A3PreviewDataDialog::A3PreviewDataDialog(QWidget *parent)
   connect(ui->tbClose, &QToolButton::clicked, this, &A3PreviewDataDialog::close);
   connect(ui->leKolomFilter, &QLineEdit::textChanged, [=](QString s) {
     auto model = findChild<PreviewModel*>();
-    model->setProperty("filterValue", s.isEmpty() ? "%" : QString("%%1%").arg(s));
+    model->setProperty("filterValue", s.isEmpty() ? "" : QString("%%1%").arg(s));
     qDebug() << "filter value" << model->property("filterValue").toString();
     model->updateQuery();
       });
@@ -119,7 +104,20 @@ A3PreviewDataDialog::A3PreviewDataDialog(QWidget *parent)
   connect(ui->tbPrev, &QToolButton::clicked, pm, &PreviewModel::prevPage);
   connect(ui->tbNext, &QToolButton::clicked, pm, &PreviewModel::nextPage);
   connect(ui->tbLast, &QToolButton::clicked, pm, &PreviewModel::lastPage);
-  pm->updateQuery();
+  ui->mainTable->setModel(proxy);
+  ui->mainTable->hideColumn(0);
+  ui->mainTable->hideColumn(1);
+  proxy->setHeaderData(2, Qt::Horizontal, "Konsumen");
+  proxy->setHeaderData(3, Qt::Horizontal, "File");
+  proxy->setHeaderData(4, Qt::Horizontal, "Bahan");
+  proxy->setHeaderData(5, Qt::Horizontal, "Page/Halaman");
+  proxy->setHeaderData(6, Qt::Horizontal, "Ripit");
+  ui->mainTable->hideColumn(7);
+  proxy->setHeaderData(7, Qt::Horizontal, "Sisi");
+  proxy->setHeaderData(8, Qt::Horizontal, "Keterangan");
+  ui->mainTable->hideColumn(9);
+  ui->mainTable->hideColumn(10);
+  ui->mainTable->resizeColumnsToContents();
 }
 
 bool A3PreviewDataDialog::eventFilter(QObject *watched, QEvent *event)
@@ -173,17 +171,6 @@ void A3PreviewDataDialog::manageNav(int cp, int mp)
   ui->tbNext->setEnabled(cp < mp);
   ui->tbLast->setEnabled(cp != mp);  
 }
-
-// void A3PreviewDataDialog::applyDateFilter()
-// {
-    // QSqlTableModel* pmod = findChild<QSqlTableModel*>();
-    // if(ui->cbTanggal->currentIndex() != 0) {
-        // QString dateFilter = ui->cbTanggal->currentText();
-        // pmod->setFilter(QString("DATE(created) = '%1'").arg(dateFilter));
-    // } else {
-        // pmod->setFilter("");
-    // }
-// }
 
 void A3PreviewDataDialog::mainTableContextMenu(const QPoint &pos)
 {
@@ -255,7 +242,7 @@ void A3PreviewDataDialog::mainTableContextMenu(const QPoint &pos)
 }
 
 void A3PreviewDataDialog::initDateFilter() {
-    QSqlQuery q("SELECT DISTINCT DATE(created) FROM a3pdata ORDER BY created DESC");
+    QSqlQuery q("SELECT DISTINCT DATE(created) FROM a3pdata ORDER BY created ASC");
     ui->cbTanggal->clear();
     while(q.next())
         ui->cbTanggal->insertItem(-1, q.value(0).toString(), q.value(0));
@@ -266,29 +253,3 @@ void A3PreviewDataDialog::on_tbPrint_clicked()
 {
     saveToExcelFile(ui->mainTable);
 }
-
-// void A3PreviewDataDialog::changeColumnFilter() {
-    // SortFilterModel* sm = findChild<SortFilterModel*>();
-    // switch (ui->cbKolom->currentIndex()) {
-        // case 1:
-            // sm->setFilterKeyColumn(2);
-            // break;
-        // case 2:
-            // sm->setFilterKeyColumn(3);
-            // break;
-        // case 3:
-            // sm->setFilterKeyColumn(4);
-            // break;
-        // case 4:
-            // sm->setFilterKeyColumn(5);
-            // break;
-        // case 5:
-            // sm->setFilterKeyColumn(6);
-            // break;
-        // case 6:
-            // sm->setFilterKeyColumn(7);
-            // break;
-        // default :
-            // sm->setFilterKeyColumn(-1);
-    // }
-// }
