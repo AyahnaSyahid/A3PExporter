@@ -72,19 +72,19 @@ void PreviewModel::updateQuery() {
     q.bindValue(":filterValue", property("filterValue"));
   }
   
-  
-  // if(!q.exec() && q.lastError().isValid()) {
+  if(!q.exec() && q.lastError().isValid()) {
+    ;
     // qDebug() << "query calculate error";
     // qDebug() << counter_query;
     // qDebug() << q.boundValues();
-  // }
+  }
   
   q.next();
   int vMaxPage = q.value(0).toInt();
   __max_page = qCeil(vMaxPage / (property("rowLimit").toDouble() < 1.0 ? vMaxPage : property("rowLimit").toDouble()));
   
-  // qDebug() << "CalculateQuery :\n" << q.lastQuery();
-  // qDebug() << QString("MaxPage :\n %1 | RowCount : %2 | CurrentPage : %3").arg(__max_page).arg(vMaxPage).arg(property("currentPage").toInt());
+  qDebug() << "CalculateQuery :\n" << q.lastQuery();
+  qDebug() << QString("MaxPage :\n %1 | RowCount : %2 | CurrentPage : %3").arg(__max_page).arg(vMaxPage).arg(property("currentPage").toInt());
   
   if(property("currentPage").toInt() > __max_page) {
     setProperty("currentPage", __max_page);
@@ -104,11 +104,11 @@ void PreviewModel::updateQuery() {
     m.bindValue(":filterValue", property("filterValue"));
   }
   
-  // if(!m.exec() && m.lastError().isValid()) {
+  if(!m.exec() && m.lastError().isValid()) {
     // qDebug() << "query model error";
     // qDebug() << model_query;
     // qDebug() << m.boundValues();
-  // }
+  }
   
   // qDebug() << "ModelQuery :" << m.lastQuery();
   setQuery(m);

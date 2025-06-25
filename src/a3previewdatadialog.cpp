@@ -118,6 +118,9 @@ A3PreviewDataDialog::A3PreviewDataDialog(QWidget *parent)
   ui->mainTable->hideColumn(9);
   ui->mainTable->hideColumn(10);
   ui->mainTable->resizeColumnsToContents();
+  ui->lPaging->setText(QString("Page %1/%2").arg(1).arg(pm->maxPage()));
+  ui->tbFirst->setDisabled(true);
+  ui->tbPrev->setDisabled(true);
 }
 
 bool A3PreviewDataDialog::eventFilter(QObject *watched, QEvent *event)

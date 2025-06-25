@@ -10,9 +10,12 @@ set(CMAKE_AUTORCC ON)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-# set(CMAKE_BUILD_TYPE Release)
 
 set(INSTALL_INTO C:/Users/AKSARA2/Desktop/QTAPP CACHE PATH "Tempat install Exported di komputer A3")
+
+string(TIMESTAMP CURRENT_DATE_TIME "Build %Y.%m.%d" UTC) # Use YYYY.MM.DD format
+
+set(EXPORTER_VERSION "${CURRENT_DATE_TIME}" CACHE STRING "Versi build aplikasi")
 
 string(TOUPPER "${CMAKE_BUILD_TYPE}" BT_UPPER)
 
@@ -53,13 +56,16 @@ set(A3P_MAIN_SOURCES res/res.qrc
                      )
 
 if(INCLUDE_WIN32)
+    message(STATUS "INCLUDE_WIN32 IS ON, creating WIN32 Only Application")
     add_executable(A3PExporter WIN32 ${A3P_MAIN_SOURCES})
 else()
+    message(STATUS "INCLUDE_WIN32 IS OFF, creating +console Application")
     add_executable(A3PExporter ${A3P_MAIN_SOURCES})
 endif()
 
 target_include_directories(A3PExporter PRIVATE ${CMAKE_SOURCE_DIR}/static-libs/header)
 target_link_libraries(A3PExporter PRIVATE Qt5::Widgets Qt5::Sql Qt5::AxContainer ${CMAKE_SOURCE_DIR}/static-libs/libQXlsx.a)
+target_compile_definitions(A3PExporter PRIVATE -DEXPORTER_VERSION="${CURRENT_DATE_TIME}")
 
 if(DEVEL_MODE_ON)
     target_compile_definitions(A3PExporter PRIVATE -DDEVEL_MODE_ON)
