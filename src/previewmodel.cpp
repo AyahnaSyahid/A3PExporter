@@ -63,13 +63,15 @@ void PreviewModel::updateQuery() {
     counter_query += columnFilter_query;
     model_query += columnFilter_query;
   }
+  
   q.prepare(counter_query);
   
   if(!dateFilter_query.isEmpty()) {
     q.bindValue(":filterDate", property("filterDate"));
   }
   if(!columnFilter_query.isEmpty()) {
-    q.bindValue(":filterValue", property("filterValue"));
+    // force replace empty with '%'
+    q.bindValue(":filterValue", property("filterValue").toString().isEmpty() ? "%" : property("filterValue").toString());
   }
   
   if(!q.exec() && q.lastError().isValid()) {
@@ -83,8 +85,8 @@ void PreviewModel::updateQuery() {
   int vMaxPage = q.value(0).toInt();
   __max_page = qCeil(vMaxPage / (property("rowLimit").toDouble() < 1.0 ? vMaxPage : property("rowLimit").toDouble()));
   
-  qDebug() << "CalculateQuery :\n" << q.lastQuery();
-  qDebug() << QString("MaxPage :\n %1 | RowCount : %2 | CurrentPage : %3").arg(__max_page).arg(vMaxPage).arg(property("currentPage").toInt());
+  // qDebug() << "CalculateQuery :\n" << q.lastQuery();
+  // qDebug() << QString("MaxPage :\n %1 | RowCount : %2 | CurrentPage : %3").arg(__max_page).arg(vMaxPage).arg(property("currentPage").toInt());
   
   if(property("currentPage").toInt() > __max_page) {
     setProperty("currentPage", __max_page);
@@ -110,7 +112,7 @@ void PreviewModel::updateQuery() {
     // qDebug() << m.boundValues();
   }
   
-  // qDebug() << "ModelQuery :" << m.lastQuery();
+  qDebug() << "counter_query" << m.lastQuery();
   setQuery(m);
   emit pageChanged(property("currentPage").toInt(), __max_page);
 };

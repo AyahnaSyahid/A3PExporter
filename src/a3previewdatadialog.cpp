@@ -94,7 +94,7 @@ A3PreviewDataDialog::A3PreviewDataDialog(QWidget *parent)
   connect(ui->tbClose, &QToolButton::clicked, this, &A3PreviewDataDialog::close);
   connect(ui->leKolomFilter, &QLineEdit::textChanged, [=](QString s) {
     auto model = findChild<PreviewModel*>();
-    model->setProperty("filterValue", s.isEmpty() ? "" : QString("%%1%").arg(s));
+    model->setProperty("filterValue", s.isEmpty() ? "%" : QString("%%1%").arg(s));
     qDebug() << "filter value" << model->property("filterValue").toString();
     model->updateQuery();
       });
