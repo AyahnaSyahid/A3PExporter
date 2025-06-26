@@ -594,15 +594,15 @@ void Exporter::on_pbFilter_clicked()
 
 void Exporter::on_pbDetach_clicked()
 {
-    A3PreviewDataDialog *prvDlg = findChild<A3PreviewDataDialog*>("prvDialog");
-    if(!prvDlg)
-            prvDlg = new A3PreviewDataDialog(this);
-    prvDlg->show();
+    A3PreviewDataDialog *prvDlg = new A3PreviewDataDialog();
+    prvDlg->setAttribute(Qt::WA_DeleteOnClose);
     connect(prvDlg, &A3PreviewDataDialog::tableUpdated, this, [&](){
         A3PDataModel *mod = findChild<A3PDataModel*>("source_model");
         mod->setTable(mod->tableName());
     });
-    connect(prvDlg, &A3PreviewDataDialog::destroyed, prvDlg, &A3PreviewDataDialog::deleteLater);
+    connect(prvDlg, &A3PreviewDataDialog::destroyed, [=](){ ui->pbDetach->setEnabled(true); });
+    ui->pbDetach->setEnabled(false);
+    prvDlg->show();
 }
 
 void Exporter::on_pushButton_clicked()

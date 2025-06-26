@@ -17,58 +17,90 @@ PreviewModel::PreviewModel(QObject* parent)
 PreviewModel::~PreviewModel() {}
 
 void PreviewModel::updateQuery() {
-  // kalkulasi total page berdasarkan property yang telah ditentukan
-  int _cPage = property("currentPage").toInt(),
-      _cLimit = property("rowLimit").toInt();
-  QString _cFilterDate(property("filterDate").toString()),
-          _cFilterBy(property("filterBy").toString()),
-          _cFilterValue(property("filterValue").toString());
-  
-  QString countQuery("SELECT COUNT(*) from a3pdata"),
-          modelQuery("SELECT * from a3pdata");
-  
-  QStringList whereClauses;
-  
-  if(_cFilterDate != "all") {
-    whereClauses << "DATE(created) = :filterDate";
-  }
-  
-  if(!_cFilterValue.isEmpty() && !_cFilterValue.replace("%", "").isEmpty()) {
-    if(_cFilterBy != "all") {
-      whereClauses << QString("%1 LIKE :filterValue").arg(_cFilterBy);
-    } else {
-      whereClauses << QString("klien || file || bahan || COALESCE(keterangan, ' ') LIKE :filterValue");
+    // Ambil nilai properti untuk pagination dan filter
+    int _cPage = property("currentPage").toInt();
+    int _cLimit = property("rowLimit").toInt();
+    _cPage = _cPage > 0 ? _cPage : 1; // Pastikan halaman minimal 1
+    QString _cFilterDate = property("filterDate").toString();
+    QString _cFilterBy = property("filterBy").toString();
+    QString _cFilterValue = property("filterValue").toString();
+
+    // Inisialisasi query dasar
+    QString countQuery = "SELECT COUNT(*) FROM a3pdata"; // Untuk menghitung total baris
+    QString modelQuery = "SELECT * FROM a3pdata";       // Untuk mengambil data
+
+    // Bangun klausa WHERE berdasarkan filter
+    QStringList whereClauses;
+    if (_cFilterDate != "all") {
+        whereClauses << "DATE(created) = :filterDate";
     }
-  }
-  
-  if(whereClauses.count()) {
-    countQuery += " WHERE " + whereClause.join(" AND ");
-    modelQuery += " WHERE " + whereClause.join(" AND ");
-  }
-  
-  if(_cLimit > 0) {
-    modelQuery += QString(" LIMIT :limit OFFSET :offset;");
-  }
-  
-  QSqlQuery q;
-  q.prepare(countQuery);
-  if(countQuery.contains(":filterValue")) {
-    q.bindValue(":filterValue", _cFilterValue);
-  }
-  if(countQuery.contains(":filterDate")) {
-    q.bindValue(":filterDate", _cFilterDate);
-  }
-  
-  if(q.exec() && q.next()) {
-    int rows = q.value(0).toInt();
-  } else {
-    qDebug() << "Error :" << q.lastError().text();
-    return;
-  }
-  
-  q.prepare()
-  emit pageChanged(property("currentPage").toInt(), __max_page);
-};
+    if (!_cFilterValue.isEmpty() && !QString(_cFilterValue).replace("%", "").isEmpty()) {
+        if (_cFilterBy != "all") {
+            whereClauses << QString("%1 LIKE :filterValue").arg(_cFilterBy);
+        } else {
+            whereClauses << "klien || file || bahan || COALESCE(keterangan, ' ') LIKE :filterValue";
+        }
+    }
+    if (!whereClauses.isEmpty()) {
+        QString whereClause = " WHERE " + whereClauses.join(" AND ");
+        countQuery += whereClause;
+        modelQuery += whereClause;
+    }
+
+    // Tambahkan LIMIT dan OFFSET untuk pagination
+    if (_cLimit > 0) {
+        modelQuery += " LIMIT :limit OFFSET :offset";
+    }
+
+    // Eksekusi query untuk menghitung total baris
+    QSqlQuery countQ;
+    countQ.prepare(countQuery);
+    if (countQuery.contains(":filterDate")) {
+        countQ.bindValue(":filterDate", _cFilterDate);
+    }
+    if (countQuery.contains(":filterValue")) {
+        countQ.bindValue(":filterValue", _cFilterValue);
+    }
+    if (countQ.exec() && countQ.next()) {
+        int rows = countQ.value(0).toInt();
+        if (_cLimit < 1) {
+            setProperty("rowLimit", rows); // Atur rowLimit ke rows jika tidak valid
+            return updateQuery();       // Panggil ulang fungsi
+        }
+        __max_page = qCeil(static_cast<double>(rows) / _cLimit);
+        __max_page = __max_page < 1 ? 1 : __max_page; // Pastikan minimal 1 halaman
+        if (_cPage > __max_page) {
+            setProperty("currentPage", __max_page); // Koreksi halaman jika melebihi maksimum
+            return updateQuery();                   // Panggil ulang fungsi
+        }
+    } else {
+        qDebug() << "Error executing countQuery:" << countQ.lastError().text();
+        return;
+    }
+
+    // Eksekusi query untuk mengambil data
+    QSqlQuery modelQ;
+    modelQ.prepare(modelQuery);
+    if (modelQuery.contains(":filterDate")) {
+        modelQ.bindValue(":filterDate", _cFilterDate);
+    }
+    if (modelQuery.contains(":filterValue")) {
+        modelQ.bindValue(":filterValue", _cFilterValue);
+    }
+    if (modelQuery.contains(":limit")) {
+        modelQ.bindValue(":limit", _cLimit);
+        modelQ.bindValue(":offset", (_cPage - 1) * _cLimit);
+    }
+    if (!modelQ.exec()) {
+        qDebug() << "Error executing modelQuery:" << modelQ.lastError().text();
+        qDebug() << "Query:" << modelQ.lastQuery();
+        return;
+    }
+
+    // Terapkan query ke model dan emit sinyal
+    setQuery(modelQ);
+    emit pageChanged(_cPage, __max_page);
+}
 
 void PreviewModel::nextPage() {
   int cp = property("currentPage").toInt() + 1;

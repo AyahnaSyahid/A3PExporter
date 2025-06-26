@@ -11,6 +11,7 @@
 #include <QClipboard>
 #include <QFileDialog>
 #include <QMenu>
+#include <QMetaType>
 #include <QtDebug>
 
 A3PreviewDataDialog::A3PreviewDataDialog(QWidget *parent)
@@ -79,14 +80,15 @@ A3PreviewDataDialog::A3PreviewDataDialog(QWidget *parent)
 
   connect(ui->cbTanggal, QOverload<int>::of(&QComboBox::currentIndexChanged), [=](int i) {
     auto model = findChild<PreviewModel*>();
-    QString va = ui->cbTanggal->itemData(i).toString() == "all" ? "%" : ui->cbTanggal->itemData(i).toString();
+    QString va = ui->cbTanggal->itemData(i).toString() == "all" ? "all" : ui->cbTanggal->itemData(i).toString();
     model->setProperty("filterDate", va);
     model->updateQuery();
   });
 
   connect(ui->cbRow, QOverload<int>::of(&QComboBox::currentIndexChanged), [=](int i) {
     auto model = findChild<PreviewModel*>();
-    int perPage = ui->cbRow->itemData(ui->cbRow->currentIndex(), Qt::DisplayRole).toInt();
+    auto vardata = ui->cbRow->itemData(ui->cbRow->currentIndex(), Qt::DisplayRole);    
+    int perPage = vardata.canConvert(QMetaType::Int) ? vardata.toInt() : 0;
     model->setProperty("rowLimit", perPage);
     model->updateQuery();
   });
@@ -95,7 +97,6 @@ A3PreviewDataDialog::A3PreviewDataDialog(QWidget *parent)
   connect(ui->leKolomFilter, &QLineEdit::textChanged, [=](QString s) {
     auto model = findChild<PreviewModel*>();
     model->setProperty("filterValue", s.isEmpty() ? "%" : QString("%%1%").arg(s));
-    qDebug() << "filter value" << model->property("filterValue").toString();
     model->updateQuery();
       });
 
