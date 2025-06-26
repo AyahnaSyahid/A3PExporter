@@ -23,8 +23,6 @@ public slots:
   void firstPage();
   void lastPage();
 
-  // void filterDate(const QString& date);
-
   void setLimit(int lim);
 
   void updateQuery();

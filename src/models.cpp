@@ -20,7 +20,8 @@ A3PDataModel::A3PDataModel(QObject *parent) : QSqlTableModel(parent)
 qlonglong A3PDataModel::tableRowCount() const
 {
     QSqlQuery q;
-    QString fil = QString(" WHERE %1").arg(filter()), query = QString("SELECT COUNT(*) FROM %1").arg(tableName());
+    QString fil = QString(" WHERE %1").arg(filter()),
+            query = QString("SELECT COUNT(*) FROM %1").arg(tableName());
     if(!filter().isEmpty())
         query += fil;
     q.exec(query);

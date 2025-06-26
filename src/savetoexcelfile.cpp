@@ -1,9 +1,7 @@
 #include "incl/savetoexcelfile.h"
-
 #include "xlsxworkbook.h"
 #include "xlsxdocument.h"
 #include "xlsxformat.h"
-
 #include <QFileDialog>
 #include <QString>
 #include <QTableView>

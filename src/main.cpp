@@ -5,6 +5,7 @@
 #include <QSharedMemory>
 #include <QMetaObject>
 #include <QDir>
+#include <QSettings>
 
 
 int main(int argc, char *argv[])
@@ -15,7 +16,7 @@ int main(int argc, char *argv[])
   A3DataBase adb;
   Exporter w;
   w.connect(&w, SIGNAL(exported(QString)), &adb, SLOT(insert(QString)));
-    
+
 #ifdef RELEASE_BUILD
 	QSharedMemory shamem("ExporterAlive");
   if( shamem.create(13) )

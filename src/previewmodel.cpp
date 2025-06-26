@@ -17,103 +17,56 @@ PreviewModel::PreviewModel(QObject* parent)
 PreviewModel::~PreviewModel() {}
 
 void PreviewModel::updateQuery() {
-  QSqlQuery q;
-  QSqlQuery m;
-  bool use_filterDate = property("filterDate").toString() != "all",
-       use_filterBy = property("filterBy").toString() != "all",
-       use_limit = property("rowLimit").toInt() > 0;
+  // kalkulasi total page berdasarkan property yang telah ditentukan
+  int _cPage = property("currentPage").toInt(),
+      _cLimit = property("rowLimit").toInt();
+  QString _cFilterDate(property("filterDate").toString()),
+          _cFilterBy(property("filterBy").toString()),
+          _cFilterValue(property("filterValue").toString());
   
-  QString counter_query,
-          model_query,
-          dateFilter_query,
-          columnFilter_query,
-          limit_query;
-
-  counter_query = "SELECT COUNT(id) FROM a3pdata";
-  model_query = "SELECT * FROM a3pdata";
-  if(property("currentPage").toInt() < 1) {
-      setProperty("currentPage", 1);
-  }
-  if(property("filterDate").toString() != "all") {
-    dateFilter_query = " DATE(created) = :filterDate ";
+  QString countQuery("SELECT COUNT(*) from a3pdata"),
+          modelQuery("SELECT * from a3pdata");
+  
+  QStringList whereClauses;
+  
+  if(_cFilterDate != "all") {
+    whereClauses << "DATE(created) = :filterDate";
   }
   
-  if(property("filterBy").toString() == "all") {
-    columnFilter_query = " klien || file || bahan || COALESCE(keterangan, '') LIKE :filterValue ";
-  } else {
-    QString filterValue_string = property("filterValue").toString();
-    if(filterValue_string == "%" || filterValue_string.isEmpty()) {
-      columnFilter_query = "";
+  if(!_cFilterValue.isEmpty() && !_cFilterValue.replace("%", "").isEmpty()) {
+    if(_cFilterBy != "all") {
+      whereClauses << QString("%1 LIKE :filterValue").arg(_cFilterBy);
     } else {
-      columnFilter_query = QString(" %1 LIKE :filterValue ").arg(property("filterBy").toString());
+      whereClauses << QString("klien || file || bahan || COALESCE(keterangan, ' ') LIKE :filterValue");
     }
-  };
-  // get max first
-  if(!dateFilter_query.isEmpty() || !columnFilter_query.isEmpty()) {
-    counter_query += " WHERE ";
-    model_query += " WHERE ";
-    if(!dateFilter_query.isEmpty()) {
-      counter_query += dateFilter_query;
-      model_query += dateFilter_query;
-      if(!columnFilter_query.isEmpty()) {
-        counter_query += " AND ";
-        model_query += " AND ";
-      }
-    }
-    counter_query += columnFilter_query;
-    model_query += columnFilter_query;
   }
   
-  q.prepare(counter_query);
-  
-  if(!dateFilter_query.isEmpty()) {
-    q.bindValue(":filterDate", property("filterDate"));
-  }
-  if(!columnFilter_query.isEmpty()) {
-    // force replace empty with '%'
-    q.bindValue(":filterValue", property("filterValue").toString().isEmpty() ? "%" : property("filterValue").toString());
+  if(whereClauses.count()) {
+    countQuery += " WHERE " + whereClause.join(" AND ");
+    modelQuery += " WHERE " + whereClause.join(" AND ");
   }
   
-  if(!q.exec() && q.lastError().isValid()) {
-    ;
-    // qDebug() << "query calculate error";
-    // qDebug() << counter_query;
-    // qDebug() << q.boundValues();
+  if(_cLimit > 0) {
+    modelQuery += QString(" LIMIT :limit OFFSET :offset;");
   }
   
-  q.next();
-  int vMaxPage = q.value(0).toInt();
-  __max_page = qCeil(vMaxPage / (property("rowLimit").toDouble() < 1.0 ? vMaxPage : property("rowLimit").toDouble()));
-  
-  // qDebug() << "CalculateQuery :\n" << q.lastQuery();
-  // qDebug() << QString("MaxPage :\n %1 | RowCount : %2 | CurrentPage : %3").arg(__max_page).arg(vMaxPage).arg(property("currentPage").toInt());
-  
-  if(property("currentPage").toInt() > __max_page) {
-    setProperty("currentPage", __max_page);
+  QSqlQuery q;
+  q.prepare(countQuery);
+  if(countQuery.contains(":filterValue")) {
+    q.bindValue(":filterValue", _cFilterValue);
+  }
+  if(countQuery.contains(":filterDate")) {
+    q.bindValue(":filterDate", _cFilterDate);
   }
   
-  // get model query
-  if(use_limit) {
-    model_query += QString(" LIMIT %1 OFFSET %2").arg(property("rowLimit").toInt()).arg(property("rowLimit").toInt() * (property("currentPage").toInt() - 1));
+  if(q.exec() && q.next()) {
+    int rows = q.value(0).toInt();
+  } else {
+    qDebug() << "Error :" << q.lastError().text();
+    return;
   }
   
-  m.prepare(model_query);
-  if(!dateFilter_query.isEmpty()) {
-    m.bindValue(":filterDate", property("filterDate"));
-  }
-  
-  if(!columnFilter_query.isEmpty()) {
-    m.bindValue(":filterValue", property("filterValue"));
-  }
-  
-  if(!m.exec() && m.lastError().isValid()) {
-    // qDebug() << "query model error";
-    // qDebug() << model_query;
-    // qDebug() << m.boundValues();
-  }
-  
-  qDebug() << "counter_query" << m.lastQuery();
-  setQuery(m);
+  q.prepare()
   emit pageChanged(property("currentPage").toInt(), __max_page);
 };
 
@@ -153,7 +106,16 @@ void PreviewModel::setLimit(int l) {
 }
 
 bool PreviewModel::insertRecord(int w, const QSqlRecord& rc) {
-  return false;
+  beginInsertRows(QModelIndex(), w, w);
+  for(int c=0; c<rc.count(); ++c) {
+    if(!rc.value(c).isNull()) {
+      setData(index(w, c), rc.value(c));
+    }
+  }
+  endInsertRows();
+  qDebug() << rc;
+  emit dataChanged(index(w, 0), index(w, rc.count()), {Qt::DisplayRole, Qt::EditRole});
+  return true;
 }
 
 QVariant PreviewModel::data(const QModelIndex& mi, int role) const {

@@ -12,6 +12,8 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(INSTALL_INTO C:/Users/AKSARA2/Desktop/QTAPP CACHE PATH "Tempat install Exported di komputer A3")
+set(INCLUDE_WIN32 ON CACHE BOOL "Buat dengan console mode (Membuka console output) jika OFF")
+set(DEVEL_MODE OFF CACHE BOOL "mengizinkan lebih dari 1 Exporter berjalan bersamaan jika ON")
 
 string(TIMESTAMP CURRENT_DATE_TIME "Build %Y.%m.%d" UTC) # Use YYYY.MM.DD format
 
@@ -51,8 +53,6 @@ set(A3P_MAIN_SOURCES res/res.qrc
                      src/tentangaplikasi.cpp
                      src/corelmanager/corelexecutor.cpp
                      src/corelmanager/incl/corelexecutor.h
-                     # src/incl/sortfiltermodel.h
-                     # src/sortfiltermodel.cpp
                      )
 
 if(INCLUDE_WIN32)
@@ -67,8 +67,11 @@ target_include_directories(A3PExporter PRIVATE ${CMAKE_SOURCE_DIR}/static-libs/h
 target_link_libraries(A3PExporter PRIVATE Qt5::Widgets Qt5::Sql Qt5::AxContainer ${CMAKE_SOURCE_DIR}/static-libs/libQXlsx.a)
 target_compile_definitions(A3PExporter PRIVATE -DEXPORTER_VERSION="${CURRENT_DATE_TIME}")
 
-if(DEVEL_MODE_ON)
+if(DEVEL_MODE)
+    message(STATUS "DEVEL_MODE ON, Running multiple A3PExporter is allowed")
     target_compile_definitions(A3PExporter PRIVATE -DDEVEL_MODE_ON)
+else()
+    message(STATUS "DEVEL_MODE OFF, Running multiple A3PExporter is NOT allowed")
 endif()
 
 install(TARGETS A3PExporter

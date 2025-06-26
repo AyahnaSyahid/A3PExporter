@@ -220,7 +220,6 @@ void A3PreviewDataDialog::mainTableContextMenu(const QPoint &pos)
             return;
         int insrow = selMod->hasSelection() ? selMod->selectedIndexes().first().row() : -1;
         for(const QString &rs : qAsConst(fname)){
-            // ab.insert(rs);
             QVariantMap tz = ab.fileStringToMap(rs);
             QSqlRecord r = pm->record();
             if(!tz.isEmpty())
@@ -238,7 +237,6 @@ void A3PreviewDataDialog::mainTableContextMenu(const QPoint &pos)
                 pm->insertRecord(insrow, r);
             }
         }
-        // reload();
     });
     contxMenu->exec();
     contxMenu->deleteLater();
