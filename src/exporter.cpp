@@ -83,7 +83,7 @@ Exporter::Exporter(QWidget *parent)
     ui->histTable->setModel(model);
     ui->histTable->hideColumn(0);
     ui->histTable->hideColumn(1);
-    ui->histTable->sortByColumn(0, Qt::AscendingOrder);
+    ui->histTable->sortByColumn(0, Qt::DescendingOrder);
     ui->histTable->model()->setHeaderData(2, Qt::Horizontal, "Klien");
     ui->histTable->model()->setHeaderData(3, Qt::Horizontal, "File");
     ui->histTable->model()->setHeaderData(4, Qt::Horizontal, "Bahan");

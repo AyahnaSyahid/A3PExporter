@@ -2,8 +2,10 @@
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QSqlRecord>
+#include <QDate>
 #include <QtMath>
 #include <QtDebug>
+
 
 PreviewModel::PreviewModel(QObject* parent)
     : __max_page(1), QSqlQueryModel(parent) {
@@ -49,6 +51,7 @@ void PreviewModel::updateQuery() {
 
     // Tambahkan LIMIT dan OFFSET untuk pagination
     if (_cLimit > 0) {
+        modelQuery += " ORDER BY id DESC";
         modelQuery += " LIMIT :limit OFFSET :offset";
     }
 
@@ -151,5 +154,16 @@ bool PreviewModel::insertRecord(int w, const QSqlRecord& rc) {
 }
 
 QVariant PreviewModel::data(const QModelIndex& mi, int role) const {
+  if(role == Qt::TextAlignmentRole) {
+    switch (mi.column()) {
+      case 4:
+      case 5:
+      case 6:
+      case 7:
+        return Qt::AlignCenter;
+    }
+  } else if(role == Qt::ToolTipRole) {
+    return mi.siblingAtColumn(1).data().toString();
+  }
   return QSqlQueryModel::data(mi, role);
 }
