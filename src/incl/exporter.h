@@ -61,6 +61,7 @@ private slots:
     void on_leFilter_textChanged(const QString& text);
     // void onMoverFailed(const QString& tplf, const QString& tdir, consr QString& fn);
     void moveExportedFile(const QVariantMap&);
+    void on_a3ReporterButton_clicked();
 
 signals:
     void requestDetect(const QString& clsid);

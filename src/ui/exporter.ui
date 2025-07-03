@@ -721,6 +721,13 @@
        <number>5</number>
       </property>
       <item>
+       <widget class="QPushButton" name="a3ReporterButton">
+        <property name="text">
+         <string>A3Reporter</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <spacer name="horizontalSpacer_2">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>

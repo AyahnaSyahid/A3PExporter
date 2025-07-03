@@ -53,6 +53,18 @@ set(A3P_MAIN_SOURCES res/res.qrc
                      src/tentangaplikasi.cpp
                      src/corelmanager/corelexecutor.cpp
                      src/corelmanager/incl/corelexecutor.h
+                     
+                     reporter/mainwindow.h
+                     reporter/mainwindow.cpp
+                     reporter/mainwindow.ui
+                     reporter/mainwindow.cpp
+                     reporter/res.qrc
+                     reporter/dirscanner.h
+                     reporter/listfilenamemodel.h
+                     reporter/printpreviewmodel.h
+                     reporter/reportermodel.h
+                     reporter/reportermodel.cpp
+                     reporter/app.ico
                      )
 
 if(INCLUDE_WIN32)

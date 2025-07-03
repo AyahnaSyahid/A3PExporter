@@ -143,7 +143,7 @@ QVariant A3PDataModel::data(const QModelIndex& mi, int role) const {
   QString fmt("%1\n%2");
   if(role == Qt::ToolTipRole) {
     auto exportTime = QDateTime::fromString(mi.siblingAtColumn(1).data().toString(), "yyyy-MM-dd HH:mm:ss");
-    return fmt.arg(QLocale().toString(exportTime, "dddd, d MMMM yyyy"), QLocale().toString(exportTime, "HH:Mm:ss"));
+    return fmt.arg(QLocale().toString(exportTime, "dddd, d MMMM yyyy"), QLocale().toString(exportTime, "HH:mm:ss"));
   }
   return QSqlTableModel::data(mi, role);
 }

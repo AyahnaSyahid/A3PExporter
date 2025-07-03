@@ -11,7 +11,7 @@ TentangAplikasi::TentangAplikasi(QWidget *parent) :
 {
     ui->setupUi(this);
     ui->label->setText(ui->label->text().arg(EXPORTER_VERSION));
-    ui->label->setText(ui->label->text().replace("Using Qt5.12", "Using Qt%1").arg(qVersion()));
+    ui->label->setText(ui->label->text().replace("2023", "2025").replace("Using Qt5.12", "Using Qt%1").arg(qVersion()));
 }
 
 TentangAplikasi::~TentangAplikasi()

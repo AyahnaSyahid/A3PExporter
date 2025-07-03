@@ -681,3 +681,15 @@ QPair<int, int> parseQty(const QString& txt) {
     }
     return {1, 1};
 }
+
+#include "reporter/mainwindow.h"
+
+namespace Reporter {
+  class RMainWindow : public MainWindow {};
+};
+
+void Exporter::on_a3ReporterButton_clicked() {
+  auto mw = new Reporter::RMainWindow();
+  mw->setAttribute(Qt::WA_DeleteOnClose);
+  mw->show();
+};
