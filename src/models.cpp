@@ -1,6 +1,7 @@
 #include "incl/models.h"
 #include <qmath.h>
 #include <QDate>
+#include <QDateTime>
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QtDebug>
@@ -138,3 +139,11 @@ QString A3PDataModel::selectStatement() const
     return  select + limit();
 }
 
+QVariant A3PDataModel::data(const QModelIndex& mi, int role) const {
+  QString fmt("%1\n%2");
+  if(role == Qt::ToolTipRole) {
+    auto exportTime = QDateTime::fromString(mi.siblingAtColumn(1).data().toString(), "yyyy-MM-dd HH:mm:ss");
+    return fmt.arg(QLocale().toString(exportTime, "dddd, d MMMM yyyy"), QLocale().toString(exportTime, "HH:Mm:ss"));
+  }
+  return QSqlTableModel::data(mi, role);
+}

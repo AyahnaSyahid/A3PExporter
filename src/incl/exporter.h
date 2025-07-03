@@ -46,7 +46,7 @@ private slots:
     void on_btPdfSetting_clicked();
     void on_lePage_textChanged(const QString&);
     void on_leExpF_textChanged(const QString&);
-    void on_pbFilter_clicked();
+    // void on_pbFilter_clicked();
     void on_pbDetach_clicked();
     void on_pushButton_clicked();
     void on_comboVersi_currentIndexChanged(int);
@@ -58,6 +58,7 @@ private slots:
     void on_actionCloseDocument_triggered();
     void handleMoveDone(const QVariantMap& vv);
     void handleMoveStart();
+    void on_leFilter_textChanged(const QString& text);
     // void onMoverFailed(const QString& tplf, const QString& tdir, consr QString& fn);
     void moveExportedFile(const QVariantMap&);
 

@@ -6,6 +6,7 @@
 #include <QMetaObject>
 #include <QDir>
 #include <QSettings>
+#include <QLocale>
 
 
 int main(int argc, char *argv[])
@@ -13,6 +14,8 @@ int main(int argc, char *argv[])
   QApplication a(argc, argv);
   a.setWindowIcon(QIcon(":/images/images/E.png"));
   QDir().setCurrent(a.applicationDirPath());
+  QLocale loc(QLocale::Indonesian, QLocale::Indonesia);
+  QLocale::setDefault(loc);
   A3DataBase adb;
   Exporter w;
   w.connect(&w, SIGNAL(exported(QString)), &adb, SLOT(insert(QString)));

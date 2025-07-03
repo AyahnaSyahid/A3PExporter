@@ -569,7 +569,7 @@ void Exporter::on_histTable_customContextMenuRequested(const QPoint &pos)
     tconMenu.exec(gp);
 }
 
-void Exporter::on_pbFilter_clicked()
+void Exporter::on_leFilter_textChanged(const QString& txt)
 {
     A3PDataModel *mod = findChild<A3PDataModel*>("A3PDataModel");
     if(mod) {
@@ -580,7 +580,7 @@ void Exporter::on_pbFilter_clicked()
 				" jkertas || \" \" ||"
 				" jkopi || \" \" ||"
 				" sisi || \" \" ||"
-				" (SELECT CASE WHEN keterangan IS NULL THEN \"\" ELSE keterangan END ) || \" \" || "
+				" COALESCE(keterangan, '') || \" \" || "
 				"(jkertas * jkopi * sisi) LIKE \"%%1%\"",
 				ftext = ui->leFilter->text().simplified();
 		if(!ftext.isEmpty())
@@ -589,7 +589,8 @@ void Exporter::on_pbFilter_clicked()
 			flt = "";
 		mod->setFilter(flt);
 	}
-    ui->histTable->sortByColumn(0, Qt::AscendingOrder);
+  ui->histTable->sortByColumn(0, Qt::DescendingOrder);
+  ui->histTable->resizeColumnsToContents();
 }
 
 void Exporter::on_pbDetach_clicked()
@@ -626,7 +627,8 @@ void Exporter::on_actionToggleHistory_triggered()
 void Exporter::on_actionRefreshHistory_triggered()
 {
     if(!ui->histGroup->isHidden()) {
-        ui->histTable->sortByColumn(0, Qt::AscendingOrder);
+        ui->histTable->sortByColumn(0, Qt::DescendingOrder);
+        ui->histTable->resizeColumnsToContents();
     }
 }
 

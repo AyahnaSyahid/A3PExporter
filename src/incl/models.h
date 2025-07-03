@@ -23,6 +23,7 @@ public:
     const QString getSelectStatment() const;
     void setDisplayMode(DisplayMode disp);
     virtual void setFilter(const QString &filter  = QString()) override;
+    QVariant data(const QModelIndex&, int) const override;
 
 public slots:
     void nextPage();

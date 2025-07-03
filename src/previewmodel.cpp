@@ -3,6 +3,8 @@
 #include <QSqlError>
 #include <QSqlRecord>
 #include <QDate>
+#include <QDateTime>
+#include <QLocale>
 #include <QtMath>
 #include <QtDebug>
 
@@ -163,7 +165,9 @@ QVariant PreviewModel::data(const QModelIndex& mi, int role) const {
         return Qt::AlignCenter;
     }
   } else if(role == Qt::ToolTipRole) {
-    return mi.siblingAtColumn(1).data().toString();
+    QString fmt("%1\n%2");
+    auto exportTime = QDateTime::fromString(mi.siblingAtColumn(1).data().toString(), "yyyy-MM-dd HH:mm:ss");
+    return fmt.arg(QLocale().toString(exportTime, "dddd, d MMMM yyyy"), QLocale().toString(exportTime, "HH:Mm:ss"));
   }
   return QSqlQueryModel::data(mi, role);
 }
