@@ -167,7 +167,7 @@ QVariant PreviewModel::data(const QModelIndex& mi, int role) const {
   } else if(role == Qt::ToolTipRole) {
     QString fmt("%1\n%2");
     auto exportTime = QDateTime::fromString(mi.siblingAtColumn(1).data().toString(), "yyyy-MM-dd HH:mm:ss");
-    return fmt.arg(QLocale().toString(exportTime, "dddd, d MMMM yyyy"), QLocale().toString(exportTime, "HH:Mm:ss"));
+    return fmt.arg(QLocale().toString(exportTime, "dddd, d MMMM yyyy"), QLocale().toString(exportTime, "HH:mm:ss"));
   }
   return QSqlQueryModel::data(mi, role);
 }

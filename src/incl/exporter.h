@@ -62,6 +62,8 @@ private slots:
     // void onMoverFailed(const QString& tplf, const QString& tdir, consr QString& fn);
     void moveExportedFile(const QVariantMap&);
     void on_a3ReporterButton_clicked();
+    void on_actionEditDataBahan_triggered();
+    void on_actionEditDataKonsumen_triggered();
 
 signals:
     void requestDetect(const QString& clsid);

@@ -6,6 +6,8 @@
 #include "corelmanager/incl/corelexecutor.h"
 #include "incl/models.h"
 #include "incl/filemover.h"
+#include "incl/editdatadialog.h"
+// #include "incl/editdatakonsumendialog.h"
 
 #include <QCompleter>
 #include <QRegularExpression>
@@ -156,6 +158,18 @@ Exporter::Exporter(QWidget *parent)
 #ifdef DEVEL_MODE_ON
     setWindowTitle(windowTitle() + " - Development");
 #endif
+    
+    ui->leKlien->setContextMenuPolicy(Qt::ActionsContextMenu);
+    ui->leBahan->setContextMenuPolicy(Qt::ActionsContextMenu);
+    
+    ui->leBahan->addAction(ui->actionEditDataBahan);
+    ui->leKlien->addAction(ui->actionEditDataKonsumen);
+    
+    if(glb->value("Exporter/Ui/DisableComboTukangSetting").toBool()) {
+      ui->comboBox->setCurrentText("");
+      ui->comboBox->hide();
+      adjustSize();
+    }
 }
 
 Exporter::~Exporter()
@@ -218,7 +232,7 @@ void Exporter::moveExportedFile(const QVariantMap& res)
     QDir exportPath(res["exportPath"].toString());
     QFile exported(res["tempFile"].toString());
     QLabel* statusLabel = findChild<QLabel*>("statusLabel");
-  
+
     if(exportPath.exists(res["exportName"].toString())) {
         // Pertimbangkan untuk membuat loop dialog sampai proses pemindahan dan atau penghapusan file temporer berhasil
         QMessageBox::critical(this, "Duplikasi file ditemukan", "Anda dapat membatalkan atau menyimpan dengan nama file berbeda pada dialog selanjutnya");
@@ -651,6 +665,20 @@ void Exporter::on_A3PDataModel_filterChanged()
 void Exporter::on_kurvaOto_toggled(bool enabled)
 {
     emit kurvaOtoChanged(ui->comboVersi->currentData(CLSIDRole).toString(), enabled);
+}
+
+void Exporter::on_actionEditDataBahan_triggered()
+{
+  auto dia = new EditDataDialog(EditDataDialog::Bahan, this);
+  dia->setAttribute(Qt::WA_DeleteOnClose);
+  dia->exec();
+}
+
+void Exporter::on_actionEditDataKonsumen_triggered()
+{
+  auto dia = new EditDataDialog(EditDataDialog::Konsumen, this);
+  dia->setAttribute(Qt::WA_DeleteOnClose);
+  dia->exec();
 }
 
 int KalkulasiJumlahHalaman(const QString &s)
